@@ -2,8 +2,9 @@
 	import type { ClassValue } from 'svelte/elements';
 	import { Button } from './Button';
 	import { twMerge } from 'tailwind-merge';
+	import { defaultMapState, mapState } from '$lib/store/editor';
 
-	const { class: className } = $props<{ class: ClassValue }>();
+	const { class: className } = $props<{ class?: ClassValue }>();
 </script>
 
 <div
@@ -12,8 +13,12 @@
 		className
 	)}
 >
-	<Button iconName="pencil" />
-	<Button iconName="bin" />
+	<Button
+		iconName="bin"
+		onclick={() => {
+			mapState.set($defaultMapState);
+		}}
+	/>
 	<!-- 
 		NOTE: 플레이 모드는 제거함.
 		      현재 연구에서 플레이어 타일이 존재하지 않음, 기본 위치를 정할 수 없어서 플레이 모드를 제거함.
