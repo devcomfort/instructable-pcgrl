@@ -1,23 +1,23 @@
 <script lang="ts">
 	import Icon from '$lib/icons/Icon.svelte';
-
-	// Props for customization
-	// 사용자 정의를 위한 Props
-	interface Props {
-		placeholder?: string;
-		disabled?: boolean;
-		maxHeight?: string;
-		showMicrophone?: boolean;
-		initialMessages?: Array<{ id: string; text: string; timestamp: Date; isUser: boolean }>;
-	}
+	import type { ClassValue } from 'svelte/elements';
+	import { twMerge } from 'tailwind-merge';
 
 	const {
 		placeholder = 'Type your message...',
 		disabled = false,
 		maxHeight = '200px',
 		showMicrophone = true,
-		initialMessages = []
-	}: Props = $props();
+		initialMessages = [],
+		class: className
+	} = $props<{
+		placeholder?: string;
+		disabled?: boolean;
+		maxHeight?: string;
+		showMicrophone?: boolean;
+		initialMessages?: Array<{ id: string; text: string; timestamp: Date; isUser: boolean }>;
+		class?: ClassValue;
+	}>();
 
 	// State management
 	// 상태 관리
@@ -168,7 +168,12 @@ Input area features auto-resizing textarea and microphone toggle button
 메시지 히스토리 표시 및 음성 녹음 기능이 있는 입력 영역 포함
 입력 영역은 자동 크기 조정 textarea와 마이크 토글 버튼 제공
 -->
-<div class="flex h-full flex-col rounded-lg border border-gray-300 bg-white shadow-sm">
+<div
+	class={twMerge(
+		'flex h-full flex-col rounded-lg border border-gray-300 bg-white shadow-sm',
+		className
+	)}
+>
 	<!-- Message History Area -->
 	<!-- 메시지 히스토리 영역 -->
 	<div class="flex-1 overflow-y-auto p-4">
