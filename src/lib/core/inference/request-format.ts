@@ -3,6 +3,35 @@ import { z } from "zod";
 import { GridMapSchema, type GridMap } from "../grid-map";
 
 /**
+ * NOTE: Stateless design due to project constraints
+ * 
+ * This request format omits agent position and session information, keeping the API
+ * stateless for project simplicity. While this approach works for the current scope,
+ * ideally we would implement session-based requests with incremental updates and
+ * agent position tracking - but time constraints make this impractical for this
+ * single-iteration project.
+ * 
+ * Trade-off: larger request payloads vs. implementation complexity.
+ * Each request being self-contained does make testing easier, which is a silver lining.
+ * 
+ * Would love to revisit this design in a future iteration if the project evolves.
+ * 
+ * ---
+ * 
+ * 프로젝트 제약으로 인한 무상태 설계
+ * 
+ * 이 요청 포맷은 에이전트 위치와 세션 정보를 생략하여 API를 무상태로 유지합니다.
+ * 현재 범위에서는 작동하지만, 이상적으로는 증분 업데이트와 에이전트 위치 추적이 있는
+ * 세션 기반 요청을 구현하고 싶었습니다 - 하지만 시간 제약으로 인해 이 단발성 프로젝트에서는
+ * 비현실적이었습니다.
+ * 
+ * 트레이드오프: 큰 요청 페이로드 vs 구현 복잡도.
+ * 각 요청이 자체 완결적이어서 테스트가 쉬워지는 것은 그나마 긍정적인 면입니다.
+ * 
+ * 프로젝트가 발전한다면 향후 버전에서 이 설계를 다시 검토하고 싶습니다.
+ */
+
+/**
  * === RLBrush Inference Request Format Definition ===
  *
  * This module defines the data structures and validation schemas for inference requests
