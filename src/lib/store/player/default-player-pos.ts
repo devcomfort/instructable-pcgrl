@@ -1,6 +1,6 @@
 import { derived } from "svelte/store";
 import type { GridMapShape } from "../../core/grid-map";
-import { mapSize } from "../generator/map-size";
+import { mapSize } from "../editor/map-size";
 
 /**
  * @store defaultPlayerPos

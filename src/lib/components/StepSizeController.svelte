@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { numberOfStep } from '$lib/store/generator/number-of-step';
+	import { numberOfStep } from '$lib/store/editor/number-of-step';
 </script>
 
 <div class="flex flex-col items-center gap-y-[10px] rounded-lg bg-gray-100 p-4 shadow-md">
