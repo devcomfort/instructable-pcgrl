@@ -74,7 +74,7 @@
 	<img
 		src={tileImagePath}
 		alt="Tile at position u:{pos.u}, v:{pos.v}"
-		class="block h-full w-full select-none object-contain {userClass}"
+		class="block h-full w-full select-none object-cover {userClass}"
 		draggable="false"
 	/>
 {:else}
