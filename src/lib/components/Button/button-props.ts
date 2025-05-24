@@ -30,7 +30,7 @@ const ClassValueSchema: z.ZodType<ClassValue> = z.lazy(() =>
  * 버튼 컴포넌트의 속성을 정의하는 Zod 스키마
  */
 export const ButtonPropsSchema = z.object({
-	onClick: z
+	onclick: z
 		.function() // args와 returns를 명시하지 않아 함수 시그니처를 느슨하게 검증
 		.optional()
 		.describe("버튼 클릭 시 실행되는 이벤트 핸들러"),
@@ -67,7 +67,7 @@ export const ButtonPropsSchema = z.object({
  * 버튼 컴포넌트의 속성을 정의하는 인터페이스
  *
  * @interface ButtonProps
- * @property {(e: MouseEvent) => void} [onClick] - 버튼 클릭 시 실행되는 이벤트 핸들러
+ * @property {(e: MouseEvent) => void} [onclick] - 버튼 클릭 시 실행되는 이벤트 핸들러
  * @property {ButtonTypes} [iconName] - 버튼에 표시될 아이콘 타입
  * @property {boolean} [selected] - 버튼의 선택 상태 여부
  * @property {string} [href] - 버튼이 링크로 작동할 경우의 URL (유효한 URL 형식이어야 함)
@@ -76,7 +76,7 @@ export const ButtonPropsSchema = z.object({
  * @property {ClassValue} class - 버튼에 적용될 CSS 클래스
  */
 export interface ButtonProps {
-	onClick?: (e: MouseEvent) => void;
+	onclick?: (e: MouseEvent) => void;
 	iconName?: ButtonTypes;
 	selected?: boolean;
 	href?: string;

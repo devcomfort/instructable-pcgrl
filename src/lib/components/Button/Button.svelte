@@ -13,7 +13,7 @@
 
 	// Define props with default values
 	const {
-		onClick = () => {},
+		onclick = () => {},
 		iconName,
 		selected = $bindable(false),
 		href,
@@ -27,7 +27,7 @@
 		try {
 			// 프로퍼티 값들을 객체로 모아서 검증
 			const props = {
-				onClick,
+				onclick,
 				iconName,
 				selected,
 				href,
@@ -79,6 +79,7 @@
 			type="button"
 			data-testdi="button-component"
 			class={`m-[5px] inline-flex items-center justify-center rounded-xl bg-white p-4 transition-all hover:bg-gray-200 focus:bg-gray-200 focus:outline-none focus:outline-offset-[-4px] focus:outline-white active:scale-[0.99] ${_class ? _class : ''}`}
+			onclick={(e) => (onclick ? onclick(e) : null)}
 		>
 			{#if iconId}
 				<Icon iconName={iconId} />
@@ -91,9 +92,8 @@
 	<button
 		type="button"
 		data-testdi="button-component"
-		onclick={(e) => (onClick ? onClick(e) : null)}
-		class={`m-[5px] inline-flex items-center justify-center rounded-xl bg-white p-4 transition-all hover:bg-gray-200 focus:bg-gray-200 focus:outline-none focus:outline-offset-[-4px] focus:outline-white active:scale-[0.99]
-		${selected ? 'bg-gray-600 hover:bg-gray-700' : ''} ${_class ? _class : ''}`}
+		class={`m-[5px] inline-flex items-center justify-center rounded-xl bg-white p-4 transition-all hover:bg-gray-200 focus:bg-gray-200 focus:outline-none focus:outline-offset-[-4px] focus:outline-white active:scale-[0.99] ${_class ? _class : ''}`}
+		onclick={(e) => (onclick ? onclick(e) : null)}
 	>
 		{#if iconId}
 			<Icon iconName={iconId} />
