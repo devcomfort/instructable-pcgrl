@@ -23,6 +23,9 @@ importers:
       lodash:
         specifier: ^4.17.21
         version: 4.17.21
+      svelte-hash:
+        specifier: ^1.0.2
+        version: 1.0.2(svelte@5.30.2)
       zod:
         specifier: ^3.24.4
         version: 3.24.4
@@ -2236,6 +2239,11 @@ packages:
     peerDependenciesMeta:
       svelte:
         optional: true
+
+  svelte-hash@1.0.2:
+    resolution: {integrity: sha512-5nvV+a/j+W2n8neD43V3kJlE39l7va/X6+Mb6wKA7UW8ksJlUHEg5UlqSpLAhkSBtVg9HmuzkNiODGznpFno5g==}
+    peerDependencies:
+      svelte: '>= 4.0.0'
 
   svelte@5.30.2:
     resolution: {integrity: sha512-zfGFEwwPeILToOxOqQyFq/vc8euXrX2XyoffkBNgn/k8D1nxbLt5+mNaqQBmZF/vVhBGmkY6VmNK18p9Gf0auQ==}
@@ -4647,6 +4655,10 @@ snapshots:
       postcss-scss: 4.0.9(postcss@8.5.3)
       postcss-selector-parser: 7.1.0
     optionalDependencies:
+      svelte: 5.30.2
+
+  svelte-hash@1.0.2(svelte@5.30.2):
+    dependencies:
       svelte: 5.30.2
 
   svelte@5.30.2:
