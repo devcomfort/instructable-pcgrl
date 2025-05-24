@@ -1,6 +1,8 @@
 <script lang="ts">
 	import StepSizeController from './StepSizeController.svelte';
 	import History from './History.svelte';
+	import { defaultMapState, mapState } from '$lib/store/editor';
+	import Button from './Button/Button.svelte';
 </script>
 
 <!-- 
@@ -26,4 +28,17 @@ Removes restrictive styling to allow maximum width usage
 		단계 크기를 조절하는 컴포넌트입니다.
 	-->
 	<StepSizeController />
+
+	<Button
+		iconName="bin"
+		onclick={() => {
+			mapState.set($defaultMapState);
+		}}
+	/>
+	<!-- 
+		NOTE: 플레이 모드는 제거함.
+		      현재 연구에서 플레이어 타일이 존재하지 않음, 기본 위치를 정할 수 없어서 플레이 모드를 제거함.
+	-->
+	<!-- <Button iconName="play" /> -->
+	<Button iconName="share" />
 </div>
