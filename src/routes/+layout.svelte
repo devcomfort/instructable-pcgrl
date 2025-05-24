@@ -16,9 +16,4 @@
 
 		<Chat />
 	</div>
-
-	<!-- TODO : 저작권 표시 업데이트하기 -->
-	<footer class="h-12 shrink-0 bg-gray-100 p-4 text-center text-sm text-gray-600">
-		<p>&copy; 2024 Your Application. All rights reserved.</p>
-	</footer>
 </div>
