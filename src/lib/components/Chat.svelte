@@ -8,6 +8,8 @@
 	import { tick } from 'svelte';
 	import { numberOfStep } from '$lib/store/editor/number-of-step';
 	import { mapState } from '$lib/store/editor/map-state';
+	import { mapCandidates } from '$lib/store/editor/map-candidates';
+	import type { GridMap } from '$lib/core/grid-map';
 
 	const {
 		placeholder = 'Type your message...',
@@ -135,24 +137,25 @@
 					isUser: false
 				});
 
-				// mapState update logic
+				// Collect all states from all episodes for mapCandidates
+				const allStates: GridMap[] = [];
 				const episodeKeys = Object.keys(response);
-				if (episodeKeys.length > 0) {
-					const firstEpisodeKey = episodeKeys[0];
-					const firstEpisode = response[firstEpisodeKey];
-					// Optional chaining
-					const lastStateInEpisode = firstEpisode?.state?.[firstEpisode.state.length - 1];
 
-					if (lastStateInEpisode) {
-						mapState.set(lastStateInEpisode);
-						console.log('[Chat] mapState updated with AI response:', lastStateInEpisode);
-					} else {
-						console.warn(
-							'[Chat] Could not retrieve last state from first episode, mapState not updated.'
-						);
+				for (const episodeKey of episodeKeys) {
+					const episode = response[episodeKey];
+					if (episode?.state && Array.isArray(episode.state)) {
+						allStates.push(...episode.state);
 					}
+				}
+
+				// Update mapCandidates with all collected states
+				if (allStates.length > 0) {
+					mapCandidates.set(allStates);
+					console.log(
+						`[Chat] mapCandidates updated with ${allStates.length} states from AI response`
+					);
 				} else {
-					console.warn('[Chat] No episodes found in API response, mapState not updated.');
+					console.warn('[Chat] No states found in API response, mapCandidates not updated.');
 				}
 			} catch (error) {
 				console.error('[Chat] API request failed:', error);
