@@ -1,15 +1,15 @@
 <script lang="ts">
 	import GridCell from './GridCell.svelte';
-	import type { GridMap } from '$lib/core/grid-map/map-type';
-	import type { GridMapShape } from '$lib/core/grid-map/map-shape-type';
-	import type { TilesetValue } from '$lib/core/grid-map/tileset-type';
 	import { Tileset } from '$lib/core/grid-map/tileset-type';
 	import type { ClassValue } from 'svelte/elements';
+	import type { GridMap } from '$lib/core/grid-map/map-type';
+	import type { GridMapShape, TilesetValue } from '$lib/core/grid-map';
+	import { showBorders as showBorders_ } from '$lib/store/editor';
 
 	const {
 		gridMap = null,
 		mapSize = null,
-		showBorders = true,
+		showBorders = $showBorders_,
 		// TODO: userClass가 사용될 때 tw-merge를 통해 개선할 필요가 있음
 		class: userClass = ''
 	} = $props<{
