@@ -4,17 +4,6 @@ import { defineConfig } from "vite";
 export default defineConfig({
 	plugins: [sveltekit()],
 	test: {
-		setupFiles: ["vitest-browser-svelte"],
-		browser: {
-			enabled: true,
-			provider: "webdriverio",
-			instances: [
-				{
-					browser: "chrome",
-					headless: true,
-				},
-			],
-		},
 		workspace: [
 			{
 				extends: "./vite.config.ts",
@@ -23,7 +12,18 @@ export default defineConfig({
 					clearMocks: true,
 					include: ["src/**/*.svelte.{test,spec}.{js,ts}"],
 					exclude: ["src/lib/server/**"],
-					setupFiles: ["./vitest-setup-client.ts"],
+					setupFiles: ["./vitest-setup-client.ts", "vitest-browser-svelte"],
+					browser: {
+						enabled: true,
+						provider: "webdriverio",
+						instances: [
+							{
+								name: "chromium-client",
+								browser: "chromium",
+								headless: true,
+							},
+						],
+					},
 				},
 			},
 			{
