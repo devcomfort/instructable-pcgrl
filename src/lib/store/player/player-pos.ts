@@ -1,10 +1,12 @@
 import { get, writable } from "svelte/store";
-import * as F from "fp-ts/function";
-
 import { defaultPlayerPos } from "./default-player-pos";
+import * as F from "fp-ts/function";
 
 /**
  * @store playerPos
+ * @deprecated This store is currently not used in the project and may be removed in future versions.
+ * If you need to manage the player's position in the future, you can use this implementation
+ * as a reference or restore it from version control.
  * @description
  * A Svelte writable store that holds and manages the player's current position
  * on the game map. The position is represented as a `[row: number, column: number]`
@@ -49,8 +51,9 @@ import { defaultPlayerPos } from "./default-player-pos";
  *
  * ---
  *
- * @store playerPos (플레이어 위치)
- * @description
+ * 현재 프로젝트에서 사용되지 않는 스토어입니다. 추후 플레이어의 위치 관리가 필요하다면
+ * 이 구현을 참고하거나 버전 관리에서 복원하여 사용하세요.
+ *
  * 게임 맵에서 플레이어의 현재 위치를 저장하고 관리하는 Svelte 쓰기 가능 스토어입니다.
  * 위치는 `GridMapShape` 타입에 부합하는 `[행: number, 열: number]` 튜플로 표현됩니다.
  *
