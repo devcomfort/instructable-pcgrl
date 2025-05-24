@@ -4,14 +4,19 @@
 	import '../tailwind.css';
 </script>
 
-<div class="flex h-screen w-screen flex-col">
+<div class="flex h-screen w-screen flex-col overflow-hidden">
 	<!-- header -->
 	<Header />
 
-	<!-- main content -->
-	<!-- TODO: <slot /> 와 Sidebar 컴포넌트의 영역 크기가 자동으로 조정되도록 해야함 -->
-	<Sidebar />
-	<slot />
+	<!-- main content area -->
+	<div class="flex flex-1 overflow-hidden">
+		<!-- {/* Sidebar: fixed width, shrinks if necessary, no growth */} -->
+		<Sidebar />
 
-	<!-- TODO: footer 추가 필요 -->
+		<slot />
+	</div>
+
+	<footer class="h-12 shrink-0 bg-gray-100 p-4 text-center text-sm text-gray-600">
+		<p>&copy; 2024 Your Application. All rights reserved.</p>
+	</footer>
 </div>
