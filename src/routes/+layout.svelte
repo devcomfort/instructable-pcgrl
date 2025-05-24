@@ -1,7 +1,6 @@
 <script lang="ts">
 	import Chat from '$lib/components/Chat.svelte';
 	import Header from '$lib/components/Header.svelte';
-	import Sidebar from '$lib/components/Sidebar.svelte';
 	import '../tailwind.css';
 </script>
 
@@ -11,14 +10,11 @@
 
 	<!-- main content area -->
 	<div class="flex flex-1 overflow-hidden">
-		<!-- Sidebar: takes space as needed, does not shrink, no growth -->
-		<Sidebar class="flex-shrink-0" />
-
 		<div class="flex-1 overflow-y-auto p-4">
 			<slot />
 		</div>
 
-		<Chat class="flex-shrink-0" />
+		<Chat />
 	</div>
 
 	<!-- TODO : 저작권 표시 업데이트하기 -->
