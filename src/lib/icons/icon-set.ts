@@ -2,6 +2,9 @@
  * Maps free icons from Iconify's IcoMoon collection to semantic identifiers
  * IcoMoon follows GPL license
  * Full icon list: https://icon-sets.iconify.design/icomoon-free/page-2.html?keyword=icomoon
+ * 
+ * Framework7 Icons by Vladimir Kharlampidi (MIT License)
+ * Full icon list: https://icon-sets.iconify.design/f7/?keyword=f7
  */
 export const IconSet = {
 	// Pencil icon for editing tools
@@ -36,6 +39,12 @@ export const IconSet = {
 
 	// Redo icon for history operations
 	redo: "icomoon-free:redo",
+
+	// Microphone icon for voice input features
+	microphone: "icomoon-free:mic",
+
+	// Send/Submit icon for sending messages/data (Framework7)
+	send: "f7:paperplane-fill",
 };
 
 /**
