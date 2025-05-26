@@ -106,9 +106,7 @@ It features a simplified, large vertical layout for tile options.
 	<div class="flex-shrink-0 border-t border-gray-200 bg-gray-50 p-3">
 		<div class="flex items-center justify-between text-sm">
 			<span class="text-gray-600">Selected Tile:</span>
-			<span class="font-semibold text-blue-600">
-				{$selectedTile ? $selectedTile : 'No tile selected'}
-			</span>
+			<span class="font-semibold text-blue-600">{$selectedTile}</span>
 		</div>
 	</div>
 </div>
