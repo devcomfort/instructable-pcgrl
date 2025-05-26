@@ -26,6 +26,9 @@ importers:
       lodash:
         specifier: ^4.17.21
         version: 4.17.21
+      runed:
+        specifier: ^0.28.0
+        version: 0.28.0(svelte@5.33.1)
       sass-embedded:
         specifier: ^1.89.0
         version: 1.89.0
@@ -2175,6 +2178,11 @@ packages:
 
   run-parallel@1.2.0:
     resolution: {integrity: sha512-5l4VyZR86LZ/lDxZTR6jqL8AFE2S0IFLMP26AbjsLVADxHdhB/c0GUsH+y39UfCi3dzz8OlQuPmnaJOMoDHQBA==}
+
+  runed@0.28.0:
+    resolution: {integrity: sha512-k2xx7RuO9hWcdd9f+8JoBeqWtYrm5CALfgpkg2YDB80ds/QE4w0qqu34A7fqiAwiBBSBQOid7TLxwxVC27ymWQ==}
+    peerDependencies:
+      svelte: ^5.7.0
 
   rxjs@7.8.2:
     resolution: {integrity: sha512-dhKf903U/PQZY6boNNtAGdWbG85WAbjT/1xYoZIC7FAY0yWapOBQVsVrDl58W86//e1VpMNBtRV4MaXfdMySFA==}
@@ -4787,6 +4795,11 @@ snapshots:
   run-parallel@1.2.0:
     dependencies:
       queue-microtask: 1.2.3
+
+  runed@0.28.0(svelte@5.33.1):
+    dependencies:
+      esm-env: 1.2.2
+      svelte: 5.33.1
 
   rxjs@7.8.2:
     dependencies:

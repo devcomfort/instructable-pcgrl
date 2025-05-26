@@ -61,6 +61,7 @@
 		"fp-ts": "^2.16.10",
 		"ky": "^1.8.1",
 		"lodash": "^4.17.21",
+		"runed": "^0.28.0",
 		"sass-embedded": "^1.89.0",
 		"svelte-french-toast": "^1.2.0",
 		"svelte-hash": "^1.0.2",
