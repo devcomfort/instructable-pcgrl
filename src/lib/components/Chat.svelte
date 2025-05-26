@@ -3,11 +3,11 @@
 	import type { ClassValue } from 'svelte/elements';
 	import { twMerge } from 'tailwind-merge';
 	import { instructions } from '$lib/store/preset/instructions';
-	import { requestInference, type RequestFormat } from '$lib/core/inference';
+	import { requestInference, type RequestFormat, type ResponseFormat } from '$lib/core/inference';
 	import { tick } from 'svelte';
 	import { numberOfStep } from '$lib/store/editor/number-of-step';
 	import { mapState } from '$lib/store/editor/map-state';
-	import { mapCandidates } from '$lib/store/editor/map-candidates';
+	import { responseHistory } from '$lib/store/chat/response-history';
 	import type { GridMap } from '$lib/core/grid-map';
 
 	const {
@@ -124,38 +124,32 @@
 				};
 
 				const startTime = performance.now(); // Record inference start time
-				const response = await requestInference(requestPayload);
+				const response: ResponseFormat = await requestInference(requestPayload);
 				const endTime = performance.now(); // Record inference end time
 				const inferenceTimeSeconds = ((endTime - startTime) / 1000).toFixed(3); // Convert to seconds and format to 3 decimal places
 
-				// Add AI inference time message
-				messages.push({
-					id: crypto.randomUUID(),
-					text: `AI has generated the map. (Inference time: ${inferenceTimeSeconds}s)`,
-					timestamp: new Date(),
-					isUser: false
-				});
-
-				// Collect all states from all episodes for mapCandidates
-				const allStates: GridMap[] = [];
-				const episodeKeys = Object.keys(response);
-
-				for (const episodeKey of episodeKeys) {
-					const episode = response[episodeKey];
-					if (episode?.state && Array.isArray(episode.state)) {
-						allStates.push(...episode.state);
-					}
-				}
-
-				// Update mapCandidates with all collected states
-				if (allStates.length > 0) {
-					mapCandidates.set(allStates);
-					console.log(
-						`[Chat] mapCandidates updated with ${allStates.length} states from AI response`
-					);
+				// Add AI response message from response.response
+				const aiResponseMessage = response?.response; // Use optional chaining for safety
+				if (aiResponseMessage) {
+					messages.push({
+						id: crypto.randomUUID(),
+						text: aiResponseMessage, // Use the potentially undefined value
+						timestamp: new Date(),
+						isUser: false
+					});
 				} else {
-					console.warn('[Chat] No states found in API response, mapCandidates not updated.');
+					// Fallback message if response.response is not available or undefined
+					messages.push({
+						id: crypto.randomUUID(),
+						text: `AI has generated the map. (Inference time: ${inferenceTimeSeconds}s - No specific message returned)`,
+						timestamp: new Date(),
+						isUser: false
+					});
 				}
+
+				// Update responseHistory with the new response
+				responseHistory.update((history) => [...history, response]);
+				console.log('[Chat] responseHistory updated with new AI response');
 			} catch (error) {
 				console.error('[Chat] API request failed:', error);
 				let errorMessage = 'An error occurred during the API request.';
