@@ -73,4 +73,4 @@
 	</div>
 </div>
 
-<Toaster position="bottom-center" />
+<Toaster position="bottom-left" />
