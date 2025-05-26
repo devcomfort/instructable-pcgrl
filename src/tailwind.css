@@ -1,4 +1,10 @@
-@import "tailwindcss/preflight";
-@tailwind utilities;
+@import "tailwindcss";
+/* @tailwind base;
+@tailwind components;
+@tailwind utilities; */
 
-@plugin "daisyui";
+@plugin "daisyui" {
+	/* 기본 테마를 명시적으로 설정 */
+	/* 참조: https://daisyui.com/docs/themes/ */
+	themes: white --default;
+}
