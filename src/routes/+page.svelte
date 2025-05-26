@@ -1,8 +1,11 @@
 <script lang="ts">
 	import Grid from '$lib/components/GridMap/Grid.svelte';
 	import { mapState } from '$lib/store/editor';
-	import { mapCandidates } from '$lib/store/editor/map-candidates';
-	import type { GridMap } from '$lib/core/grid-map';
+	import {
+		mapCandidates,
+		type MapCandidate,
+		currentMapInstruction
+	} from '$lib/store/editor/map-candidates';
 
 	/**
 	 * Handle clicking on a map candidate
@@ -13,8 +16,8 @@
 	 * 맵 후보 클릭 처리
 	 * 선택된 후보로 현재 mapState를 업데이트합니다
 	 */
-	function handleCandidateClick(candidate: GridMap) {
-		mapState.set(candidate);
+	function handleCandidateClick(candidate: MapCandidate) {
+		mapState.set(candidate.map);
 		console.log('[Page] Map candidate selected and mapState updated');
 	}
 </script>
@@ -86,13 +89,13 @@
 				<!-- Candidates grid display with responsive columns -->
 				<!-- 반응형 컬럼을 가진 후보 그리드 표시 -->
 				<div class="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
-					{#each $mapCandidates as candidate, index (index)}
+					{#each $mapCandidates as candidate, index (candidate.episodeId)}
 						<div
 							class="cursor-pointer rounded-lg border-2 border-gray-200 p-2 transition-all hover:border-blue-500 hover:shadow-md"
 							onclick={() => handleCandidateClick(candidate)}
 							role="button"
 							tabindex="0"
-							aria-label="Select map candidate {index + 1}"
+							aria-label="Select map candidate {index + 1}: {candidate.instruction}"
 							onkeydown={(e) => {
 								if (e.key === 'Enter' || e.key === ' ') {
 									e.preventDefault();
@@ -103,10 +106,20 @@
 							<div class="mb-2 text-center">
 								<span class="text-xs font-medium text-gray-600">Candidate {index + 1}</span>
 							</div>
-							<!-- 1:1 aspect ratio container for consistent grid layout -->
-							<!-- 일관된 그리드 레이아웃을 위한 1:1 비율 컨테이너 -->
-							<div class="aspect-square">
-								<Grid gridMap={candidate} showBorders={true} editMode />
+							<!-- Flex layout with Grid and Instruction label -->
+							<!-- Grid와 Instruction 라벨이 포함된 Flex 레이아웃 -->
+							<div class="flex flex-col gap-2">
+								<!-- 1:1 aspect ratio container for consistent grid layout -->
+								<!-- 일관된 그리드 레이아웃을 위한 1:1 비율 컨테이너 -->
+								<div class="aspect-square">
+									<Grid gridMap={candidate.map} showBorders={true} editMode />
+								</div>
+								<!-- Instruction label displayed below the grid -->
+								<!-- 그리드 아래에 표시되는 Instruction 라벨 -->
+								<div class="max-h-12 overflow-hidden text-xs leading-tight text-gray-700">
+									<span class="font-medium text-gray-500">Instruction:</span>
+									<span class="mt-1 block">{candidate.instruction}</span>
+								</div>
 							</div>
 						</div>
 					{/each}
@@ -127,12 +140,24 @@
 
 		<!-- Full Map Display Area - No scrolling, shows entire map -->
 		<!-- 전체 맵 표시 영역 - 스크롤 없이 전체 맵 표시 -->
-		<div class="min-h-0 flex-1 overflow-hidden text-center">
+		<div class="min-h-0 flex-1 overflow-hidden">
 			{#if $mapState}
-				<!-- Map container that fills available space -->
-				<!-- 사용 가능한 공간을 채우는 맵 컨테이너 -->
-				<div class="h-full w-full">
-					<Grid gridMap={$mapState} showBorders={true} editMode />
+				<!-- Flex layout for map and instruction -->
+				<!-- 맵과 instruction을 위한 Flex 레이아웃 -->
+				<div class="flex h-full flex-col gap-4">
+					<!-- Map container that fills most of the available space -->
+					<!-- 사용 가능한 공간의 대부분을 차지하는 맵 컨테이너 -->
+					<div class="min-h-0 flex-1">
+						<Grid gridMap={$mapState} showBorders={true} editMode />
+					</div>
+					<!-- Instruction display area -->
+					<!-- Instruction 표시 영역 -->
+					{#if $currentMapInstruction}
+						<div class="flex-shrink-0 rounded-lg bg-gray-50 p-3 text-sm">
+							<span class="font-medium text-gray-600">Current Instruction:</span>
+							<p class="mt-1 text-gray-800">{$currentMapInstruction}</p>
+						</div>
+					{/if}
 				</div>
 			{:else}
 				<!-- Empty state when no map is selected -->

@@ -21,31 +21,39 @@
 import type { GridMap } from "$lib/core/grid-map";
 import { derived } from "svelte/store";
 import { responseHistory } from "../chat/response-history";
+import { mapState } from "./map-state";
 
 /**
- * Writable store containing an array of GridMap candidates
+ * Type representing a map candidate with its associated instruction
+ */
+export type MapCandidate = {
+	map: GridMap;
+	instruction: string;
+	episodeId: string;
+};
+
+/**
+ * Derived store containing an array of MapCandidate objects
+ * Each candidate includes the GridMap and its associated instruction
  *
  * @example
  * ```typescript
  * // Subscribe to changes
  * mapCandidates.subscribe(candidates => {
  *   console.log('Available maps:', candidates.length);
+ *   candidates.forEach(candidate => {
+ *     console.log('Map instruction:', candidate.instruction);
+ *   });
  * });
- *
- * // Update candidates
- * mapCandidates.set(newMapArray);
- *
- * // Add a new candidate
- * mapCandidates.update(current => [...current, newMap]);
  * ```
  *
  * ---
  *
- * GridMap 후보들의 배열을 담고 있는 반응형 스토어
+ * GridMap 후보들과 해당 지시사항을 함께 담고 있는 파생 스토어
  */
 export const mapCandidates = derived(
 	responseHistory,
-	($responseHistory): GridMap[] => {
+	($responseHistory): MapCandidate[] => {
 		const latestResponse = $responseHistory.at(-1);
 
 		if (!latestResponse) {
@@ -61,7 +69,7 @@ export const mapCandidates = derived(
 			return []; // 에피소드가 없으면 빈 배열 반환
 		}
 
-		const candidates: GridMap[] = [];
+		const candidates: MapCandidate[] = [];
 		for (const key of episodeKeys) {
 			const episodeData = latestResponse[key];
 			// episodeData가 실제 EpisodeData 타입인지, state 배열이 있는지, 비어있지 않은지 확인
@@ -69,17 +77,52 @@ export const mapCandidates = derived(
 				episodeData &&
 				typeof episodeData === "object" &&
 				"state" in episodeData &&
+				"instruction" in episodeData &&
 				Array.isArray(episodeData.state) &&
-				episodeData.state.length > 0
+				episodeData.state.length > 0 &&
+				typeof episodeData.instruction === "string"
 			) {
 				const lastState = episodeData.state.at(-1);
 				if (lastState) {
 					// lastState가 undefined가 아닌지 확인
-					candidates.push(lastState);
+					candidates.push({
+						map: lastState,
+						instruction: episodeData.instruction,
+						episodeId: key,
+					});
 				}
 			}
 		}
 
 		return candidates;
 	},
+);
+
+/**
+ * Derived store that provides the instruction for the currently selected map
+ * Returns the instruction if the current mapState matches any candidate,
+ * otherwise returns null
+ *
+ * ---
+ *
+ * 현재 선택된 맵의 instruction을 제공하는 파생 스토어
+ * 현재 mapState가 후보 중 하나와 일치하면 해당 instruction을 반환하고,
+ * 그렇지 않으면 null을 반환합니다
+ */
+export const currentMapInstruction = derived(
+	[mapCandidates, mapState],
+	([$mapCandidates, $mapState]): string | null => {
+		if (!$mapState || $mapCandidates.length === 0) {
+			return null;
+		}
+
+		// Find a candidate whose map matches the current mapState
+		// GridMap을 JSON 문자열로 비교하여 일치하는 후보를 찾습니다
+		const currentMapJson = JSON.stringify($mapState);
+		const matchingCandidate = $mapCandidates.find(
+			(candidate) => JSON.stringify(candidate.map) === currentMapJson
+		);
+
+		return matchingCandidate?.instruction || null;
+	}
 );
