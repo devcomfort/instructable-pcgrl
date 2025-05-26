@@ -2,7 +2,7 @@ import { assert } from "@toss/assert";
 import ky from "ky";
 import type { RequestFormat } from "./request-format";
 import { ResponseFormatSchema, type ResponseFormat } from "./response-format";
-
+import { z } from "zod";
 /**
  * === RLBrush API Inference Request Client ===
  *
@@ -104,10 +104,19 @@ function validateResponseData(responseDataJson: unknown): ResponseFormat {
 export async function requestInference(
 	request: RequestFormat,
 ): Promise<ResponseFormat> {
-	const apiUrl = "https://rlbrush-api.inchang.dev/action";
-	const userAgent =
-		"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36";
+	const baseApiUrl = import.meta.env.VITE_API_BASE;
+	// Validate that the VITE_API_BASE environment variable is a valid URL using Zod.
+	const isUrl = z.string().url().safeParse(baseApiUrl);
+	assert(
+		isUrl.success,
+		"VITE_API_BASE environment variable is not a valid URL. Please check your .env file.",
+	);
 
+	// URL 객체를 사용하여 안전하게 URL 결합
+	const apiUrl = new URL("action", baseApiUrl).toString();
+
+	// TODO: retry, timeout, backoffLimit, delay 등의 옵션을 빠르게 설정할 수 있도록
+	//       config 모듈을 만들고 설정 모아두기.
 	try {
 		// ky handles JSON stringification for `json` option and sets Content-Type.
 		// It also parses the JSON response with `.json<unknown>()`.
@@ -115,9 +124,6 @@ export async function requestInference(
 		const responseDataJson = await ky
 			.post(apiUrl, {
 				json: request,
-				headers: {
-					"User-Agent": userAgent,
-				},
 				retry: {
 					limit: 3, // Max 3 retries
 					methods: ["post"], // Retry on POST requests
