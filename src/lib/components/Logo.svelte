@@ -15,5 +15,5 @@
 <div
 	class={twMerge('font-pixel flex flex-1 rounded-lg bg-[#aaaaff] p-4 text-2xl font-normal', class_)}
 >
-	Instructable PCGRL
+	{@html import.meta.env.VITE_TITLE}
 </div>
