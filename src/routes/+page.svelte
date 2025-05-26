@@ -106,7 +106,7 @@
 							<!-- 1:1 aspect ratio container for consistent grid layout -->
 							<!-- 일관된 그리드 레이아웃을 위한 1:1 비율 컨테이너 -->
 							<div class="aspect-square">
-								<Grid gridMap={candidate} showBorders={true} />
+								<Grid gridMap={candidate} showBorders={true} editMode />
 							</div>
 						</div>
 					{/each}
@@ -132,7 +132,7 @@
 				<!-- Map container that fills available space -->
 				<!-- 사용 가능한 공간을 채우는 맵 컨테이너 -->
 				<div class="h-full w-full">
-					<Grid gridMap={$mapState} showBorders={true} />
+					<Grid gridMap={$mapState} showBorders={true} editMode />
 				</div>
 			{:else}
 				<!-- Empty state when no map is selected -->
