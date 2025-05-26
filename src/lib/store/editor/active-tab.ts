@@ -3,7 +3,7 @@ import { internalHashStore } from "./hash-store";
 import type { Writable } from "svelte/store";
 
 export type ActiveTab = "edit" | "chat";
-const DEFAULT_ACTIVE_TAB: ActiveTab = "edit";
+const DEFAULT_ACTIVE_TAB: ActiveTab = "chat";
 
 /**
  * @store activeTab
