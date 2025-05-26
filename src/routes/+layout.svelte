@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { Toaster } from 'svelte-french-toast';
+
 	import Header from '$lib/components/Header.svelte';
 	import TabbedView from '$lib/components/TabbedView.svelte';
 	import '../tailwind.css';
@@ -70,3 +72,5 @@
 		</div>
 	</div>
 </div>
+
+<Toaster position="bottom-center" />

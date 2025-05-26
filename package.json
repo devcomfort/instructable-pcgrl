@@ -61,6 +61,8 @@
 		"fp-ts": "^2.16.10",
 		"ky": "^1.8.1",
 		"lodash": "^4.17.21",
+		"sass-embedded": "^1.89.0",
+		"svelte-french-toast": "^1.2.0",
 		"svelte-hash": "^1.0.2",
 		"tailwind-merge": "^3.3.0",
 		"zod": "^3.25.28"
