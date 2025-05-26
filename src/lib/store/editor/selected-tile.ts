@@ -11,10 +11,10 @@ import { writable } from "svelte/store";
  * 사용자가 Edit 컴포넌트의 타일 팔레트에서 선택한 타일 타입을 관리하는 스토어입니다.
  * 맵 편집 시 그리드 셀에 배치될 타일 타입을 결정합니다.
  *
- * The initial value is undefined, and it gets updated to the corresponding
+ * The initial value is 'WALL', and it gets updated to the corresponding
  * TilesetKey value when the user selects a tile from the palette.
  *
- * 초기값은 undefined이며, 사용자가 팔레트에서 타일을 선택하면 해당 TilesetKey 값으로 업데이트됩니다.
+ * 초기값은 'WALL'이며, 사용자가 팔레트에서 타일을 선택하면 해당 TilesetKey 값으로 업데이트됩니다.
  *
  * @see {@link TilesetKey} - Available tile types / 사용 가능한 타일 타입들
  * @see {@link Edit} - Component that uses this store / 이 스토어를 사용하는 타일 선택 컴포넌트
@@ -32,4 +32,4 @@ import { writable } from "svelte/store";
  * });
  * ```
  */
-export const selectedTile = writable<TilesetKey>(undefined);
+export const selectedTile = writable<TilesetKey | undefined>(undefined);
