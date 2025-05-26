@@ -5,3 +5,4 @@ export { mapState } from "./map-state";
 export { mapCandidates } from "./map-candidates";
 export { showBorders } from "./show-borders";
 export { selectedTile } from "./selected-tile";
+export { activeTab } from "./active-tab";
