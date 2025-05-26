@@ -4,9 +4,6 @@
 	import type { Position } from '$lib/core/user-action/position-type';
 	import type { ClassValue } from 'svelte/elements';
 
-	// TODO: width, height 제거할 수도 있음.
-	//       Grid.svelte에서 크기를 설정하고 자동으로 설정이 가능하다면.
-
 	const {
 		pos,
 		tileName,
