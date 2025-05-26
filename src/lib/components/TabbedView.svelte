@@ -3,7 +3,7 @@
 	import Edit from '$lib/components/Edit.svelte';
 	import { twMerge } from 'tailwind-merge';
 	import type { ClassValue } from 'svelte/elements';
-	import { activeTab } from '$lib/store/editor/map-state';
+	import { activeTab } from '$lib/store/editor';
 
 	const { class: className } = $props<{ class?: ClassValue }>();
 </script>

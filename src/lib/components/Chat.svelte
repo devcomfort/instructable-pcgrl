@@ -8,7 +8,6 @@
 	import { numberOfStep } from '$lib/store/editor/number-of-step';
 	import { mapState } from '$lib/store/editor/map-state';
 	import { responseHistory } from '$lib/store/chat/response-history';
-	import type { GridMap } from '$lib/core/grid-map';
 
 	const {
 		placeholder = 'Type your message...',
