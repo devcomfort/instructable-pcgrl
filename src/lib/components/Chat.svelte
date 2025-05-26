@@ -4,7 +4,6 @@
 	import { twMerge } from 'tailwind-merge';
 	import { instructions } from '$lib/store/preset/instructions';
 	import { requestInference, type RequestFormat } from '$lib/core/inference';
-	import { get, writable } from 'svelte/store';
 	import { tick } from 'svelte';
 	import { numberOfStep } from '$lib/store/editor/number-of-step';
 	import { mapState } from '$lib/store/editor/map-state';
@@ -236,21 +235,6 @@
 	}
 
 	/**
-	 * Reset textarea height to default
-	 * Used after sending message to maintain consistent appearance.
-	 *
-	 * ---
-	 *
-	 * Reset textarea height to default.
-	 * Used after sending message to maintain consistent appearance.
-	 */
-	function resetTextareaHeight() {
-		if (textareaElement) {
-			textareaElement.style.height = 'auto';
-		}
-	}
-
-	/**
 	 * Format timestamp for message display
 	 * Returns human-readable time format.
 	 *
@@ -268,26 +252,69 @@
 </script>
 
 <!-- 
-Chat component with modern UI design matching project style
-Includes message history display and input area with voice recording capability
-Input area features auto-resizing textarea and microphone toggle button
+=== CHAT COMPONENT - VERTICAL FLEX LAYOUT ===
 
----
+이 컴포넌트는 TabbedView 내부에서 전체 높이를 차지하며
+메시지 히스토리와 입력 영역을 세로로 분할 표시합니다.
 
-Chat component with modern UI design matching project style.
-Includes message history display and input area with voice recording capability.
-Input area features auto-resizing textarea and microphone toggle button.
+🎯 COMPONENT OBJECTIVES (컴포넌트 목표):
+1. 탭 영역의 전체 높이 활용
+2. 메시지 영역에서만 스크롤 허용
+3. 입력 영역은 항상 하단 고정
+4. 텍스트에어리어 자동 크기 조절
+
+📐 LAYOUT STRUCTURE (레이아웃 구조):
+┌─────────────────────────────────────┐ ← h-full (TabbedView로부터 상속)
+│ ┌─────────────────────────────────┐ │
+│ │ Message History Area            │ │ ← flex-1 min-h-0 overflow-y-auto
+│ │ ┌─────────────────────────────┐ │ │
+│ │ │ Message 1                   │ │ │
+│ │ │ Message 2                   │ │ │
+│ │ │ Message 3                   │ │ │
+│ │ │ ...                         │ │ │ ← 스크롤 가능
+│ │ │ ↕ SCROLL                    │ │ │
+│ │ └─────────────────────────────┘ │ │
+│ └─────────────────────────────────┘ │
+│ ┌─────────────────────────────────┐ │
+│ │ Input Area (Fixed)              │ │ ← flex-shrink-0
+│ │ - Suggested messages            │ │
+│ │ - Textarea + Buttons            │ │
+│ │ - Status indicators             │ │
+│ └─────────────────────────────────┘ │
+└─────────────────────────────────────┘
+
+🔑 KEY FEATURES (주요 기능):
+- 메시지 영역: 세로 스크롤, 자동 최신 메시지로 이동
+- 제안 메시지: 클릭 시 입력창에 자동 입력
+- 텍스트에어리어: 내용에 따라 높이 자동 조절 (최대 200px)
+- 음성 입력: 향후 구현 예정 (현재 플레이스홀더)
+- API 상태: 로딩 및 오류 상태 표시
+
+⚠️  LAYOUT WARNINGS (레이아웃 경고):
+- h-full 제거 시 탭 영역 높이 미활용
+- flex-1 제거 시 메시지 영역 크기 문제
+- min-h-0 제거 시 flex shrinking 문제
+- overflow-hidden 제거 시 스크롤바 누출
+
+🎨 STYLING NOTES (스타일링 노트):
+- 시스템 모드: 모든 메시지를 동일한 스타일로 표시
+- 사용자/AI 구분: 배경색과 정렬로 시각적 구분
+- 반응형: 모바일에서도 적절한 크기와 간격 유지
+
+=== END SECTION ===
 -->
 <div
 	class={twMerge(
-		'flex h-full w-[90vw] max-w-[90vw] flex-col rounded-lg border border-gray-300 bg-white shadow-sm md:w-[50vw] md:max-w-[50vw] lg:w-[30vw] lg:max-w-[30vw] xl:w-[20vw] xl:max-w-[20vw]',
+		'flex h-full flex-col overflow-hidden rounded-lg border border-gray-300 bg-white shadow-sm',
 		className
 	)}
 >
-	<!-- Message History Area -->
-	<div class="flex-1 overflow-y-auto p-4">
+	<!-- Message History Area - Scrollable message display -->
+	<!-- 메시지 히스토리 영역 - 스크롤 가능한 메시지 표시 -->
+	<div class="min-h-0 flex-1 overflow-y-auto p-4">
 		{#if messages.length === 0}
-			<!-- Empty state message -->
+			<!-- Empty state message when no messages exist -->
+			<!-- 메시지가 없을 때의 빈 상태 표시 -->
 			<div class="flex h-full items-center justify-center text-gray-500">
 				<div class="text-center">
 					<p class="text-lg font-medium">Generate Maps with IPCGRL</p>
@@ -295,8 +322,9 @@ Input area features auto-resizing textarea and microphone toggle button.
 				</div>
 			</div>
 		{:else}
-			<!-- Message list -->
-			<div class="space-y-3">
+			<!-- Message list with automatic scrolling -->
+			<!-- 자동 스크롤이 있는 메시지 목록 -->
+			<div class="flex flex-col gap-3">
 				{#each messages as message (message.id)}
 					<div
 						class="flex {systemMode
@@ -306,7 +334,7 @@ Input area features auto-resizing textarea and microphone toggle button.
 								: 'justify-start'}"
 					>
 						<div
-							class="break-words rounded-lg px-3 py-2 {systemMode
+							class="rounded-lg px-3 py-2 break-words {systemMode
 								? 'bg-gray-100 text-gray-900'
 								: message.isUser
 									? 'bg-blue-500 text-white'
@@ -323,15 +351,17 @@ Input area features auto-resizing textarea and microphone toggle button.
 		{/if}
 	</div>
 
-	<!-- Input Area -->
-	<div class="border-t border-gray-200 bg-gray-50 p-4">
-		<!-- Suggested Messages Area -->
+	<!-- Input Area - Fixed at bottom, never scrolls -->
+	<!-- 입력 영역 - 하단 고정, 스크롤되지 않음 -->
+	<div class="flex-shrink-0 border-t border-gray-200 bg-gray-50 p-4">
+		<!-- Suggested Messages Area - Quick input options -->
+		<!-- 제안 메시지 영역 - 빠른 입력 옵션 -->
 		{#if suggestedMessages.length > 0 && !disabled}
 			<div class="mb-2 flex flex-col items-start gap-2">
 				{#each suggestedMessages as suggestion}
 					<button
 						type="button"
-						class="max-w-xs whitespace-normal rounded-full bg-gray-200 px-3 py-1 text-left text-xs text-gray-700 hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+						class="focus:ring-opacity-50 max-w-xs rounded-full bg-gray-200 px-3 py-1 text-left text-xs whitespace-normal text-gray-700 hover:bg-gray-300 focus:ring-2 focus:ring-blue-500 focus:outline-none"
 						onclick={() => handleSuggestedMessageClick(suggestion)}
 					>
 						{suggestion}
@@ -340,8 +370,11 @@ Input area features auto-resizing textarea and microphone toggle button.
 			</div>
 		{/if}
 
+		<!-- Input Controls - Textarea and buttons -->
+		<!-- 입력 컨트롤 - 텍스트에어리어와 버튼들 -->
 		<div class="flex items-end gap-2">
-			<!-- Text Input with Auto-resize -->
+			<!-- Auto-resizing textarea container -->
+			<!-- 자동 크기 조절 텍스트에어리어 컨테이너 -->
 			<div class="flex-1">
 				<textarea
 					bind:this={textareaElement}
@@ -349,18 +382,19 @@ Input area features auto-resizing textarea and microphone toggle button.
 					{placeholder}
 					disabled={disabled || isLoadingAPI}
 					rows="1"
-					class="w-full resize-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 disabled:bg-gray-100 disabled:text-gray-500"
+					class="focus:ring-opacity-50 w-full resize-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:bg-gray-100 disabled:text-gray-500"
 					style="max-height: {maxHeight};"
 					onkeydown={handleKeydown}
 					oninput={handleInput}
 				></textarea>
 			</div>
 
-			<!-- Voice Input Button -->
+			<!-- Voice Input Button - Future implementation -->
+			<!-- 음성 입력 버튼 - 향후 구현 예정 -->
 			{#if showMicrophone}
 				<button
 					type="button"
-					class="flex items-center justify-center rounded-lg p-3 transition-all hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 disabled:cursor-not-allowed disabled:opacity-50 {isRecording
+					class="focus:ring-opacity-50 flex items-center justify-center rounded-lg p-3 transition-all hover:bg-gray-200 focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 {isRecording
 						? 'bg-red-100 text-red-600 hover:bg-red-200'
 						: 'bg-white text-gray-600 shadow'}"
 					onclick={handleMicrophoneToggle}
@@ -372,10 +406,11 @@ Input area features auto-resizing textarea and microphone toggle button.
 				</button>
 			{/if}
 
-			<!-- Send Button -->
+			<!-- Send Button - Triggers message submission -->
+			<!-- 전송 버튼 - 메시지 전송 트리거 -->
 			<button
 				type="button"
-				class="flex items-center justify-center rounded-lg bg-blue-500 p-3 text-white shadow transition-all hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 disabled:cursor-not-allowed disabled:bg-gray-300"
+				class="focus:ring-opacity-50 flex items-center justify-center rounded-lg bg-blue-500 p-3 text-white shadow transition-all hover:bg-blue-600 focus:ring-2 focus:ring-blue-500 focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-300"
 				onclick={handleSendMessage}
 				disabled={disabled || !messageInput.trim() || isLoadingAPI}
 				aria-label="Send message"
@@ -385,7 +420,8 @@ Input area features auto-resizing textarea and microphone toggle button.
 			</button>
 		</div>
 
-		<!-- Recording Status Indicator / API Loading Indicator -->
+		<!-- Status Indicators - API loading and recording states -->
+		<!-- 상태 표시기 - API 로딩 및 녹음 상태 -->
 		{#if isLoadingAPI}
 			<div
 				class="mt-2 flex items-center gap-2 text-sm text-blue-600"
