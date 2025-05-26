@@ -4,6 +4,7 @@
 	import toast from 'svelte-french-toast';
 
 	import StepSizeController from './StepSizeController.svelte';
+	import History from './History.svelte';
 	import Button from './Button/Button.svelte';
 
 	const handleShareClick = async () => {
@@ -34,6 +35,13 @@ Removes restrictive styling to allow maximum width usage
 		단계 크기를 조절하는 컴포넌트입니다.
 	-->
 	<StepSizeController />
+
+	<!-- 
+		History component for undo/redo actions.
+		---
+		실행 취소/다시 실행을 위한 히스토리 컴포넌트입니다.
+	-->
+	<History />
 
 	<Button
 		iconName="bin"
