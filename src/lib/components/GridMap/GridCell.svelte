@@ -10,7 +10,10 @@
 	const {
 		pos,
 		tileName,
-		class: userClass = ''
+		class: userClass = '',
+		onmousedown,
+		onmouseenter,
+		onmouseup
 	} = $props<{
 		/**
 		 * Position of this tile in the grid map using UV coordinates.
@@ -40,6 +43,33 @@
 		 * 이 타일에 적용할 추가 CSS 클래스.
 		 */
 		class?: ClassValue;
+
+		/**
+		 * Mouse down event handler for editing functionality.
+		 *
+		 * ---
+		 *
+		 * 편집 기능을 위한 마우스 다운 이벤트 핸들러.
+		 */
+		onmousedown?: (event: MouseEvent) => void;
+
+		/**
+		 * Mouse enter event handler for drag painting.
+		 *
+		 * ---
+		 *
+		 * 드래그 페인팅을 위한 마우스 엔터 이벤트 핸들러.
+		 */
+		onmouseenter?: (event: MouseEvent) => void;
+
+		/**
+		 * Mouse up event handler for editing functionality.
+		 *
+		 * ---
+		 *
+		 * 편집 기능을 위한 마우스 업 이벤트 핸들러.
+		 */
+		onmouseup?: (event: MouseEvent) => void;
 	}>();
 
 	/**
@@ -71,16 +101,30 @@
 </script>
 
 {#if tileImagePath}
-	<img
-		src={tileImagePath}
-		alt="Tile at position u:{pos.u}, v:{pos.v}"
-		class="block h-full w-full select-none object-cover {userClass}"
-		draggable="false"
-	/>
+	<div
+		class="block h-full w-full {userClass}"
+		role="gridcell"
+		tabindex={onmousedown ? 0 : -1}
+		{onmousedown}
+		{onmouseenter}
+		{onmouseup}
+	>
+		<img
+			src={tileImagePath}
+			alt="Tile at position u:{pos.u}, v:{pos.v}"
+			class="h-full w-full object-cover select-none"
+			draggable="false"
+		/>
+	</div>
 {:else}
 	<div
 		class="relative flex h-full w-full items-center justify-center border-2 border-red-500 bg-red-400 {userClass}"
 		title="Error: Invalid tile at position u:{pos.u}, v:{pos.v}"
+		role="gridcell"
+		tabindex={onmousedown ? 0 : -1}
+		{onmousedown}
+		{onmouseenter}
+		{onmouseup}
 	>
 		<span class="text-xs font-bold text-white">?</span>
 	</div>

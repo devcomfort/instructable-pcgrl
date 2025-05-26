@@ -5,12 +5,15 @@
 	import type { GridMap } from '$lib/core/grid-map/map-type';
 	import type { GridMapShape, TilesetValue } from '$lib/core/grid-map';
 	import { showBorders as showBorders_ } from '$lib/store/editor';
+	import { selectedTile } from '$lib/store/editor/selected-tile';
+	import { mapState } from '$lib/store/editor/map-state';
+	import { twMerge } from 'tailwind-merge';
 
 	const {
 		gridMap = null,
 		mapSize = null,
 		showBorders = $showBorders_,
-		// TODO: userClass가 사용될 때 tw-merge를 통해 개선할 필요가 있음
+		editMode = false,
 		class: userClass = ''
 	} = $props<{
 		/**
@@ -45,6 +48,17 @@
 		showBorders?: boolean;
 
 		/**
+		 * Whether to enable edit mode for the grid.
+		 * When true, allows clicking and dragging to modify tiles.
+		 *
+		 * ---
+		 *
+		 * 그리드의 편집 모드를 활성화할지 여부.
+		 * true일 때 클릭과 드래그로 타일을 수정할 수 있음.
+		 */
+		editMode?: boolean;
+
+		/**
 		 * Additional CSS classes to apply to the grid container.
 		 *
 		 * ---
@@ -53,6 +67,9 @@
 		 */
 		class?: ClassValue;
 	}>();
+
+	// Mouse drag state for continuous drawing
+	let isMouseDown = $state(false);
 
 	/**
 	 * Create the complete grid including borders if enabled.
@@ -96,6 +113,73 @@
 		return completeGridData;
 	}
 
+	/**
+	 * Handle cell interaction for editing mode.
+	 * Updates the map state with the selected tile if edit mode is enabled.
+	 */
+	function handleCellInteraction(gridRowIndex: number, gridColIndex: number) {
+		if (!editMode || !$selectedTile) return;
+
+		// Calculate actual map coordinates, considering borders
+		let mapRowIndex = gridRowIndex;
+		let mapColIndex = gridColIndex;
+
+		if (showBorders) {
+			// If borders are shown, subtract 1 from both coordinates
+			// Skip if clicking on border tiles
+			if (
+				gridRowIndex === 0 ||
+				gridRowIndex === gridRows - 1 ||
+				gridColIndex === 0 ||
+				gridColIndex === gridCols - 1
+			) {
+				return; // Don't edit border tiles
+			}
+			mapRowIndex = gridRowIndex - 1;
+			mapColIndex = gridColIndex - 1;
+		}
+
+		// Update the map state
+		mapState.update((currentMap) => {
+			const newMap = currentMap.map((row) => [...row]);
+
+			if (
+				mapRowIndex >= 0 &&
+				mapRowIndex < newMap.length &&
+				mapColIndex >= 0 &&
+				mapColIndex < newMap[0].length
+			) {
+				newMap[mapRowIndex][mapColIndex] = Tileset[$selectedTile];
+			}
+
+			return newMap;
+		});
+	}
+
+	/**
+	 * Handle mouse down event on a cell
+	 */
+	function handleMouseDown(gridRowIndex: number, gridColIndex: number) {
+		if (!editMode) return;
+		isMouseDown = true;
+		handleCellInteraction(gridRowIndex, gridColIndex);
+	}
+
+	/**
+	 * Handle mouse enter event on a cell (for drag painting)
+	 */
+	function handleMouseEnter(gridRowIndex: number, gridColIndex: number) {
+		if (!editMode || !isMouseDown) return;
+		handleCellInteraction(gridRowIndex, gridColIndex);
+	}
+
+	/**
+	 * Handle mouse up event to stop drawing
+	 */
+	function handleMouseUp() {
+		isMouseDown = false;
+	}
+
 	const completeGrid = $derived(createCompleteGrid());
 	const gridRows = $derived(completeGrid.length);
 	const gridCols = $derived(completeGrid[0]?.length || 0);
@@ -132,15 +216,25 @@
 
 {#if gridRows > 0 && gridCols > 0}
 	<div
-		class="grid select-none gap-0 border-2 border-gray-300 bg-gray-50 {userClass}"
+		class={twMerge('grid gap-0 border-2 border-gray-300 bg-gray-50 select-none', userClass)}
 		style="--gtc: {gridTemplateColumnsValue}; --gtr: {gridTemplateRowsValue}; --ar: {aspectRatioValue}; grid-template-columns: var(--gtc); grid-template-rows: var(--gtr); aspect-ratio: var(--ar);"
 		role="grid"
+		tabindex={editMode ? 0 : -1}
 		aria-label="Game grid with {gridRows} rows and {gridCols} columns"
+		onmouseup={handleMouseUp}
+		onmouseleave={() => (isMouseDown = false)}
 	>
 		{#each completeGrid.flat() as tileValue, index (index)}
 			{@const rowIndex = Math.floor(index / gridCols)}
 			{@const colIndex = index % gridCols}
-			<GridCell pos={{ u: colIndex, v: rowIndex }} tileName={tileValue} />
+			<GridCell
+				pos={{ u: colIndex, v: rowIndex }}
+				tileName={tileValue}
+				onmousedown={() => handleMouseDown(rowIndex, colIndex)}
+				onmouseenter={() => handleMouseEnter(rowIndex, colIndex)}
+				onmouseup={handleMouseUp}
+				class={editMode ? 'cursor-pointer' : ''}
+			/>
 		{/each}
 	</div>
 {:else}
@@ -149,7 +243,7 @@
 		role="status"
 		aria-label="Empty grid"
 	>
-		<div class="p-5 text-center italic text-gray-600">
+		<div class="p-5 text-center text-gray-600 italic">
 			<span>No grid data available or invalid size</span>
 		</div>
 	</div>
