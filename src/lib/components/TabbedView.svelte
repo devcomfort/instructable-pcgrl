@@ -1,13 +1,11 @@
 <script lang="ts">
 	import Chat from '$lib/components/Chat.svelte';
+	import Edit from '$lib/components/Edit.svelte';
 	import { twMerge } from 'tailwind-merge';
 	import type { ClassValue } from 'svelte/elements';
+	import { activeTab } from '$lib/store/editor/map-state';
 
 	const { class: className } = $props<{ class?: ClassValue }>();
-
-	// 활성 탭 상태 관리
-	// biome-ignore lint/style/useConst: Svelte5 문법 때문에 사용
-	let activeTab = $state<'chat' | 'edit'>('chat');
 </script>
 
 <!-- 
@@ -21,6 +19,7 @@ DaisyUI의 기본 탭 구조 대신 완전한 커스텀 Flexbox 레이아웃을 
 2. 탭 버튼 영역: 고정 높이 (auto)
 3. 탭 콘텐츠 영역: 남은 공간 모두 차지 (flex-1)
 4. 스크롤은 각 탭 콘텐츠 내부에서만 발생
+5. URL 해시를 통해 활성 탭 상태 지속 (map-state.ts에서 관리)
 
 📐 HEIGHT CALCULATION FLOW (높이 계산 흐름):
 h-screen (100vh)
@@ -45,19 +44,19 @@ h-screen (100vh)
 	<div class="tabs tabs-boxed bg-base-200 flex-shrink-0 gap-2 p-2">
 		<button
 			type="button"
-			class="tab flex-1 rounded-lg font-medium transition-all duration-300 {activeTab === 'chat'
+			class="tab flex-1 rounded-lg font-medium transition-all duration-300 {$activeTab === 'chat'
 				? 'bg-primary text-primary-content scale-105 border-0 shadow-lg'
 				: 'text-base-content/60 hover:text-base-content hover:bg-base-300/70 hover:scale-102 hover:shadow-md'}"
-			onclick={() => (activeTab = 'chat')}
+			onclick={() => activeTab.set('chat')}
 		>
 			💬 Chat
 		</button>
 		<button
 			type="button"
-			class="tab flex-1 rounded-lg font-medium transition-all duration-300 {activeTab === 'edit'
+			class="tab flex-1 rounded-lg font-medium transition-all duration-300 {$activeTab === 'edit'
 				? 'bg-primary text-primary-content scale-105 border-0 shadow-lg'
 				: 'text-base-content/60 hover:text-base-content hover:bg-base-300/70 hover:scale-102 hover:shadow-md'}"
-			onclick={() => (activeTab = 'edit')}
+			onclick={() => activeTab.set('edit')}
 		>
 			✏️ Edit
 		</button>
@@ -66,25 +65,11 @@ h-screen (100vh)
 	<!-- Tab Content - Takes all remaining height -->
 	<!-- 탭 콘텐츠 - 남은 높이를 모두 차지 -->
 	<div class="bg-base-100 min-h-0 flex-1">
-		{#if activeTab === 'chat'}
+		{#if $activeTab === 'chat'}
 			<Chat />
-		{:else if activeTab === 'edit'}
-			<div class="bg-base-100 h-full p-4">
-				<!-- TODO: Edit 탭의 실제 내용을 여기에 추가하세요. -->
-				<div class="card bg-base-200 border-base-300 border shadow-sm">
-					<div class="card-body">
-						<h2 class="card-title text-base-content flex items-center gap-2">
-							<span class="text-lg">✏️</span>
-							Edit 기능
-						</h2>
-						<p class="text-base-content/70">
-							Edit 탭 내용입니다. 여기에 에디터 또는 다른 컴포넌트를 추가할 수 있습니다.
-						</p>
-						<div class="card-actions mt-4 justify-end">
-							<button class="btn btn-primary btn-sm"> 기능 추가 예정 </button>
-						</div>
-					</div>
-				</div>
+		{:else if $activeTab === 'edit'}
+			<div class="bg-base-100 h-full">
+				<Edit class="h-full" />
 			</div>
 		{/if}
 	</div>

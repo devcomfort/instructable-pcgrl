@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { defaultMapState, mapState } from '$lib/store/editor';
 	import { copyTextToClipboard } from '$lib/utils';
+	import toast from 'svelte-french-toast';
 
 	import StepSizeController from './StepSizeController.svelte';
 	import Button from './Button/Button.svelte';
@@ -9,12 +10,11 @@
 		const url = window.location.href;
 		const copyResult = await copyTextToClipboard(url);
 
-		// TODO: toast나 modal 처리를 수행해야함.
-		// if (copyResult instanceof Error) {
-		// 	toast.error('URL 복사에 실패했습니다.');
-		// } else {
-		// 	toast.success(`URL이 복사되었습니다: ${url}`);
-		// }
+		if (copyResult instanceof Error) {
+			toast.error('Failed to copy URL.');
+		} else {
+			toast.success('URL copied to clipboard.');
+		}
 	};
 </script>
 
@@ -39,6 +39,7 @@ Removes restrictive styling to allow maximum width usage
 		iconName="bin"
 		onclick={() => {
 			mapState.set($defaultMapState);
+			toast.success('Data has been reset.');
 		}}
 	/>
 	<!-- 
