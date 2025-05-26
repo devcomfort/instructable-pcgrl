@@ -78,7 +78,7 @@
 		<button
 			type="button"
 			data-testdi="button-component"
-			class={`m-[5px] inline-flex items-center justify-center rounded-xl bg-white p-4 transition-all hover:bg-gray-200 focus:bg-gray-200 focus:outline-none focus:outline-offset-[-4px] focus:outline-white active:scale-[0.99] ${_class ? _class : ''}`}
+			class={`inline-flex items-center justify-center rounded-xl bg-white p-4 transition-all hover:bg-gray-200 focus:bg-gray-200 focus:outline-offset-[-4px] focus:outline-white focus:outline-none active:scale-[0.99] ${_class ? _class : ''}`}
 			onclick={(e) => (onclick ? onclick(e) : null)}
 		>
 			{#if iconId}
@@ -92,7 +92,7 @@
 	<button
 		type="button"
 		data-testdi="button-component"
-		class={`m-[5px] inline-flex items-center justify-center rounded-xl bg-white p-4 transition-all hover:bg-gray-200 focus:bg-gray-200 focus:outline-none focus:outline-offset-[-4px] focus:outline-white active:scale-[0.99] ${_class ? _class : ''}`}
+		class={`inline-flex items-center justify-center rounded-xl bg-white p-4 transition-all hover:bg-gray-200 focus:bg-gray-200 focus:outline-offset-[-4px] focus:outline-white focus:outline-none active:scale-[0.99] ${_class ? _class : ''}`}
 		onclick={(e) => (onclick ? onclick(e) : null)}
 	>
 		{#if iconId}
