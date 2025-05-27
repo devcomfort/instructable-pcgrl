@@ -1,22 +1,37 @@
 <script lang="ts">
 	import Grid from '$lib/components/GridMap/Grid.svelte';
+	import AnimationControls from '$lib/components/GridMap/AnimationControls.svelte';
 	import MapAnimation from '$lib/components/GridMap/MapAnimation.svelte';
+	import SimpleProgressBar from '$lib/components/GridMap/SimpleProgressBar.svelte';
 	import type { GridMap } from '$lib/core/grid-map';
 	import { mapState } from '$lib/store/editor';
 	import {
 		mapCandidates,
 		type MapCandidate,
-		currentMapInstruction
+		currentMapInstruction as pageCurrentMapInstructionStore
 	} from '$lib/store/editor/map-candidates';
 	import { animationConfig, logAnimationConfig } from '$lib/utils/env';
+	import { onDestroy } from 'svelte';
 
 	// Selection animation state
 	let isPlayingSelectionAnimation = $state(false);
 	let selectionAnimationStates: GridMap[] = $state([]);
 	let selectedCandidate: MapCandidate | null = $state(null);
+	let currentAnimationFrameIndex = $state(0);
+	let animationTimer: ReturnType<typeof setInterval> | null = null;
+
+	// biome-ignore lint/style/useConst: Svelte 5 문법 때문에 무시함.
+	let gridDisplayContainerWidth = $state(0);
+	// biome-ignore lint/style/useConst: Svelte 5 문법 때문에 무시함.
+	let gridDisplayContainerHeight = $state(0);
+
+	// Derived state for grid size using Svelte 5 rune $derived
+	// biome-ignore lint/style/useConst: Svelte 5 문법 때문에 무시함.
+	let commonSize = $derived(
+		Math.max(0, Math.min(gridDisplayContainerWidth, gridDisplayContainerHeight) - 2)
+	);
 
 	// Log animation configuration on component load
-	// 컴포넌트 로드 시 애니메이션 설정 로그 출력
 	logAnimationConfig();
 
 	/**
@@ -34,14 +49,29 @@
 		selectedCandidate = candidate;
 
 		if ($animationConfig.selectionAnimationMode && candidate.states.length > 1) {
-			// Play selection animation
-			isPlayingSelectionAnimation = true;
+			// Stop any existing animation first
+			stopSelectionAnimation();
+
+			// Setup new animation
 			selectionAnimationStates = candidate.states;
-			console.log('[Page] Playing selection animation with', candidate.states.length, 'frames');
+			currentAnimationFrameIndex = 0;
+			setAnimationFrame(0);
+
+			// Start animation
+			startSelectionAnimation();
+			console.log(
+				'[Page] Playing selection animation with',
+				candidate.states.length,
+				'frames for instruction:',
+				candidate.instruction
+			);
 		} else {
 			// Direct update without animation
 			mapState.set(candidate.map);
-			console.log('[Page] Map candidate selected and mapState updated (no animation)');
+			console.log(
+				'[Page] Map candidate selected and mapState updated (no animation) for instruction:',
+				candidate.instruction
+			);
 		}
 	}
 
@@ -52,11 +82,119 @@
 	function handleSelectionAnimationComplete() {
 		if (selectedCandidate) {
 			mapState.set(selectedCandidate.map);
-			isPlayingSelectionAnimation = false;
-			selectionAnimationStates = [];
+			stopSelectionAnimation();
 			console.log('[Page] Selection animation completed, mapState updated');
 		}
 	}
+
+	/**
+	 * Start selection animation
+	 * 선택 애니메이션 시작
+	 */
+	function startSelectionAnimation() {
+		if (selectionAnimationStates.length <= 1) return;
+
+		isPlayingSelectionAnimation = true;
+		// 이전 타이머가 있다면 확실히 제거 (안전장치)
+		if (animationTimer) {
+			clearInterval(animationTimer);
+			animationTimer = null;
+		}
+
+		animationTimer = setInterval(() => {
+			// 애니메이션이 중단된 상태라면 더 이상 진행하지 않음
+			if (!isPlayingSelectionAnimation) {
+				if (animationTimer) {
+					clearInterval(animationTimer);
+					animationTimer = null;
+				}
+				return;
+			}
+
+			const nextFrameIndex = currentAnimationFrameIndex + 1;
+
+			if (nextFrameIndex >= selectionAnimationStates.length) {
+				// 마지막 프레임에 도달했거나 넘어섰다면 애니메이션 즉시 종료 준비
+				if (animationTimer) {
+					clearInterval(animationTimer); // 타이머를 여기서 즉시 멈춤
+					animationTimer = null;
+				}
+				// 화면에 마지막 프레임이 확실히 표시되도록 합니다.
+				setAnimationFrame(selectionAnimationStates.length - 1);
+
+				// 완료 처리 (0.8초 지연은 유지하되, 타이머는 이미 멈춘 상태)
+				setTimeout(handleSelectionAnimationComplete, 800);
+			} else {
+				// 다음 프레임으로 진행
+				setAnimationFrame(nextFrameIndex);
+			}
+		}, $animationConfig.selectionAnimationInterval);
+	}
+
+	/**
+	 * Stop selection animation
+	 * 선택 애니메이션 정지
+	 */
+	function stopSelectionAnimation() {
+		isPlayingSelectionAnimation = false;
+		if (animationTimer) {
+			clearInterval(animationTimer);
+			animationTimer = null;
+		}
+		currentAnimationFrameIndex = 0;
+		selectionAnimationStates = [];
+	}
+
+	/**
+	 * Set specific animation frame
+	 * 특정 애니메이션 프레임 설정
+	 */
+	function setAnimationFrame(frameIndex: number) {
+		if (frameIndex >= 0 && frameIndex < selectionAnimationStates.length) {
+			currentAnimationFrameIndex = frameIndex;
+			mapState.set(selectionAnimationStates[frameIndex]);
+		}
+	}
+
+	/**
+	 * Animation control handlers
+	 * 애니메이션 컨트롤 핸들러들
+	 */
+	const animationControlHandlers = {
+		onPlay: startSelectionAnimation,
+		onPause: () => {
+			if (animationTimer) {
+				clearInterval(animationTimer);
+				animationTimer = null;
+			}
+		},
+		onReset: () => {
+			stopSelectionAnimation();
+			if (selectionAnimationStates.length > 0) {
+				setAnimationFrame(0);
+			}
+		},
+		onPrevious: () => {
+			const prevFrame =
+				currentAnimationFrameIndex > 0
+					? currentAnimationFrameIndex - 1
+					: selectionAnimationStates.length - 1;
+			setAnimationFrame(prevFrame);
+		},
+		onNext: () => {
+			const nextFrame = (currentAnimationFrameIndex + 1) % selectionAnimationStates.length;
+			setAnimationFrame(nextFrame);
+		},
+		onGoToEnd: () => {
+			setAnimationFrame(selectionAnimationStates.length - 1);
+		},
+		onSetFrame: setAnimationFrame
+	};
+
+	// Cleanup on component destroy
+	onDestroy(() => {
+		stopSelectionAnimation();
+	});
 </script>
 
 <!-- 
@@ -146,30 +284,27 @@
 							<!-- Flex layout with Grid and Instruction label -->
 							<!-- Grid와 Instruction 라벨이 포함된 Flex 레이아웃 -->
 							<div class="flex flex-col gap-2">
+								<!-- Instruction label displayed above the grid for consistency -->
+								<!-- 통일성을 위해 그리드 위에 표시되는 Instruction 라벨 -->
+								<div class="max-h-8 overflow-hidden text-xs leading-tight text-gray-700">
+									<span class="font-medium text-gray-500">Instruction:</span>
+									<span class="ml-1">{candidate.instruction}</span>
+								</div>
 								<!-- 1:1 aspect ratio container for consistent grid layout -->
 								<!-- 일관된 그리드 레이아웃을 위한 1:1 비율 컨테이너 -->
 								<div class="aspect-square">
 									{#if $animationConfig.candidateAnimationMode && candidate.states && candidate.states.length > 1}
-										<!-- Show animation if multiple states are available and animation mode is enabled -->
-										<!-- 여러 상태가 있고 애니메이션 모드가 활성화된 경우 애니메이션 표시 -->
 										<MapAnimation
 											states={candidate.states}
 											showBorders={true}
 											editMode={true}
+											showControls={true}
 											interval={$animationConfig.candidateAnimationInterval}
 											autoPlay={false}
 										/>
 									{:else}
-										<!-- Show static grid if only one state, no animation data, or animation mode disabled -->
-										<!-- 상태가 하나뿐이거나, 애니메이션 데이터가 없거나, 애니메이션 모드가 비활성화된 경우 정적 그리드 표시 -->
 										<Grid gridMap={candidate.map} showBorders={true} editMode />
 									{/if}
-								</div>
-								<!-- Instruction label displayed below the grid -->
-								<!-- 그리드 아래에 표시되는 Instruction 라벨 -->
-								<div class="max-h-12 overflow-hidden text-xs leading-tight text-gray-700">
-									<span class="font-medium text-gray-500">Instruction:</span>
-									<span class="mt-1 block">{candidate.instruction}</span>
 								</div>
 							</div>
 						</div>
@@ -179,76 +314,89 @@
 		</div>
 	</div>
 
-	<!-- Current Map Section (Right Half) -->
-	<!-- 현재 맵 영역 (우측 절반) - 스크롤 없이 전체 맵 표시 -->
-	<div class="flex min-h-0 flex-col gap-4 p-4">
+	<!-- Current Selected Map (Right Half) -->
+	<div class="flex min-h-0 flex-col gap-2 p-4">
 		<!-- Fixed Title Area - Never shrinks -->
-		<!-- 고정 제목 영역 - 절대 축소되지 않음 -->
 		<div class="flex-shrink-0">
 			<h2 class="text-xl font-bold text-gray-800">Current Selected Map</h2>
-			<p class="text-sm text-gray-600">The currently active map state</p>
+			<p class="text-sm text-gray-600">
+				{selectedCandidate
+					? 'The currently selected map.'
+					: 'No map selected. Select a candidate from the left or generate a new one.'}
+			</p>
 		</div>
 
-		<!-- Full Map Display Area - No scrolling, shows entire map -->
-		<!-- 전체 맵 표시 영역 - 스크롤 없이 전체 맵 표시 -->
-		<div class="min-h-0 flex-1 overflow-hidden">
-			{#if isPlayingSelectionAnimation && selectionAnimationStates.length > 0}
-				<!-- Show selection animation -->
-				<!-- 선택 애니메이션 표시 -->
-				<div class="flex h-full flex-col gap-4">
-					<div class="min-h-0 flex-1">
-						<MapAnimation
-							states={selectionAnimationStates}
-							showBorders={true}
-							editMode={true}
-							interval={$animationConfig.selectionAnimationInterval}
-							autoPlay={true}
-							onFrameChange={(frameIndex, state) => {
-								// Update mapState during animation for live preview
-								mapState.set(state);
-								// Check if animation is complete
-								if (frameIndex === selectionAnimationStates.length - 1) {
-									// Wait a bit before completing animation
-									setTimeout(handleSelectionAnimationComplete, 800);
-								}
-							}}
-						/>
+		<!-- Main display area for the map -->
+		{#if $mapState}
+			<div class="flex min-h-0 flex-1 flex-col gap-2">
+				<!-- Instruction display area - Fixed height h-10 -->
+				{#if selectedCandidate && selectedCandidate.instruction}
+					{@const sedangAnimasi = isPlayingSelectionAnimation}
+					<div
+						class="flex h-10 flex-shrink-0 items-center rounded-md border-l-4 px-3 text-xs {sedangAnimasi
+							? 'border-blue-400 bg-blue-50 text-blue-700'
+							: 'border-gray-400 bg-gray-50 text-gray-800'}"
+					>
+						<div class="flex items-center gap-2">
+							<span class="font-medium">
+								{sedangAnimasi ? 'Applying for:' : 'Current Instruction:'}
+							</span>
+							<span>{selectedCandidate.instruction}</span>
+						</div>
 					</div>
-					<!-- Show animation status -->
-					<!-- 애니메이션 상태 표시 -->
-					<div class="flex-shrink-0 rounded-lg bg-blue-50 p-3 text-sm">
-						<span class="font-medium text-blue-600">Playing Selection Animation</span>
-						<p class="mt-1 text-blue-800">Showing how the AI agent reached this solution...</p>
-					</div>
-				</div>
-			{:else if $mapState}
-				<!-- Normal map display -->
-				<!-- 일반 맵 표시 -->
-				<div class="flex h-full flex-col gap-4">
-					<!-- Map container that fills most of the available space -->
-					<!-- 사용 가능한 공간의 대부분을 차지하는 맵 컨테이너 -->
-					<div class="min-h-0 flex-1">
-						<Grid gridMap={$mapState} showBorders={true} editMode />
-					</div>
-					<!-- Instruction display area -->
-					<!-- Instruction 표시 영역 -->
-					{#if $currentMapInstruction}
-						<div class="flex-shrink-0 rounded-lg bg-gray-50 p-3 text-sm">
-							<span class="font-medium text-gray-600">Current Instruction:</span>
-							<p class="mt-1 text-gray-800">{$currentMapInstruction}</p>
+				{:else}
+					<!-- instruction이 없으면 공간만 차지 -->
+					<div class="h-10 flex-shrink-0"></div>
+				{/if}
+
+				<!-- Grid display area - Centered and aspect-square -->
+				<div
+					class="flex min-h-0 flex-1 items-center justify-center overflow-hidden p-1"
+					bind:clientWidth={gridDisplayContainerWidth}
+					bind:clientHeight={gridDisplayContainerHeight}
+				>
+					{#if commonSize > 0 && $mapState}
+						<div style="width: {commonSize}px; height: {commonSize}px;">
+							<Grid
+								gridMap={$mapState}
+								showBorders={true}
+								class="h-full w-full"
+								editMode={!isPlayingSelectionAnimation}
+							/>
+						</div>
+					{:else if $mapState}
+						<div class="flex h-full w-full items-center justify-center text-xs text-gray-400">
+							Map display area is too small.
 						</div>
 					{/if}
 				</div>
-			{:else}
-				<!-- Empty state when no map is selected -->
-				<!-- 선택된 맵이 없을 때의 빈 상태 -->
-				<div class="flex h-full items-center justify-center">
-					<div class="text-gray-500">
+
+				<!-- Simple Progress Bar Area -->
+				{#if isPlayingSelectionAnimation && selectionAnimationStates.length > 1}
+					<div class="flex-shrink-0 py-2">
+						<SimpleProgressBar
+							currentFrameIndex={currentAnimationFrameIndex}
+							totalFrames={selectionAnimationStates.length}
+						/>
+					</div>
+				{:else}
+					<!-- Maintain consistent height when progress bar is not shown. Total height = 16px (py-2) + 16px (h-4 of progressbar) = 32px = h-8 -->
+					<div class="h-8 flex-shrink-0"></div>
+				{/if}
+			</div>
+		{:else}
+			<!-- Empty state when no map is selected, maintaining layout structure -->
+			<div class="flex min-h-0 flex-1 flex-col gap-2">
+				<div class="h-10 flex-shrink-0"></div>
+				<div class="flex min-h-0 flex-1 items-center justify-center">
+					<div class="text-center text-gray-500">
 						<p class="text-lg font-medium">No map selected</p>
-						<p class="mt-2 text-sm">Select a candidate from left or generate new maps</p>
+						<p class="mt-2 text-sm">Select a candidate from the left or generate a new map.</p>
 					</div>
 				</div>
-			{/if}
-		</div>
+				<!-- Placeholder for progress bar area in empty state to maintain layout consistency -->
+				<div class="h-8 flex-shrink-0"></div>
+			</div>
+		{/if}
 	</div>
 </div>

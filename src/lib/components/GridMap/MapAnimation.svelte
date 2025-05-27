@@ -11,6 +11,8 @@
 		editMode = false,
 		interval = 500,
 		autoPlay = false,
+		showControls = true,
+		gridOnly = false,
 		class: userClass = '',
 		onFrameChange = undefined
 	} = $props<{
@@ -43,6 +45,18 @@
 		 * 애니메이션을 자동으로 시작할지 여부
 		 */
 		autoPlay?: boolean;
+
+		/**
+		 * Whether to show animation controls
+		 * 애니메이션 컨트롤을 표시할지 여부
+		 */
+		showControls?: boolean;
+
+		/**
+		 * Whether to show only the grid without controls
+		 * 컨트롤 없이 그리드만 표시할지 여부
+		 */
+		gridOnly?: boolean;
 
 		/**
 		 * Additional CSS classes
@@ -165,10 +179,10 @@
 	});
 </script>
 
-<div class="flex flex-col gap-2 {userClass}">
-	<!-- Grid Display Area -->
-	<!-- 그리드 표시 영역 -->
-	<div class="flex-1">
+{#if gridOnly}
+	<!-- Grid Only Mode - Just the grid without any wrapper -->
+	<!-- 그리드 전용 모드 - 래퍼 없이 그리드만 표시 -->
+	<div class={userClass}>
 		{#if currentState}
 			<Grid gridMap={currentState} {showBorders} {editMode} />
 		{:else}
@@ -179,87 +193,127 @@
 			</div>
 		{/if}
 	</div>
+{:else}
+	<!-- Full Animation Component with Controls -->
+	<!-- 컨트롤이 포함된 전체 애니메이션 컴포넌트 -->
+	<div class="flex h-full flex-col {userClass}">
+		<!-- Grid Display Area - Takes most of the space -->
+		<!-- 그리드 표시 영역 - 대부분의 공간을 차지 -->
+		<div class="mb-2 min-h-0 flex-1">
+			{#if currentState}
+				<Grid gridMap={currentState} {showBorders} {editMode} />
+			{:else}
+				<div
+					class="flex aspect-square items-center justify-center rounded border-2 border-dashed border-gray-300 bg-gray-50"
+				>
+					<span class="text-sm text-gray-500">No animation data</span>
+				</div>
+			{/if}
+		</div>
 
-	<!-- Animation Controls -->
-	<!-- 애니메이션 컨트롤 -->
-	{#if hasStates}
-		<div class="flex flex-col gap-2">
-			<!-- Progress Bar -->
-			<!-- 진행 표시줄 -->
-			<div class="flex items-center gap-2 text-xs text-gray-600">
-				<span>{currentFrameIndex + 1} / {totalFrames}</span>
-				<div class="flex-1 rounded-full bg-gray-200">
-					<div
-						class="h-1 rounded-full bg-blue-500 transition-all duration-200"
-						style="width: {((currentFrameIndex + 1) / totalFrames) * 100}%"
-					></div>
+		<!-- Animation Controls - Compact fixed height -->
+		<!-- 애니메이션 컨트롤 - 컴팩트한 고정 높이 -->
+		{#if hasStates && showControls}
+			<div class="flex-shrink-0">
+				<div class="flex flex-col gap-1">
+					<!-- Progress Bar -->
+					<!-- 진행 표시줄 -->
+					<div class="flex items-center gap-2 text-xs text-gray-600">
+						<span class="min-w-fit text-xs">{currentFrameIndex + 1}/{totalFrames}</span>
+						<div class="flex-1 rounded-full bg-gray-200">
+							<div
+								class="h-1 rounded-full bg-blue-500 transition-all duration-200"
+								style="width: {((currentFrameIndex + 1) / totalFrames) * 100}%"
+							></div>
+						</div>
+					</div>
+
+					<!-- Control Buttons - Made more compact -->
+					<!-- 컨트롤 버튼 - 더 컴팩트하게 -->
+					<div class="flex items-center justify-center gap-1">
+						<button
+							class="flex h-6 w-6 items-center justify-center rounded bg-gray-100 text-xs text-gray-600 transition-colors hover:bg-gray-200 disabled:opacity-50"
+							onclick={(e) => {
+								e.stopPropagation();
+								resetToStart();
+							}}
+							disabled={currentFrameIndex === 0}
+							title="Reset to start"
+						>
+							⏮
+						</button>
+
+						<button
+							class="flex h-6 w-6 items-center justify-center rounded bg-gray-100 text-xs text-gray-600 transition-colors hover:bg-gray-200"
+							onclick={(e) => {
+								e.stopPropagation();
+								previousFrame();
+							}}
+							title="Previous frame"
+						>
+							◀
+						</button>
+
+						<button
+							class="flex h-7 w-7 items-center justify-center rounded bg-blue-500 text-xs text-white transition-colors hover:bg-blue-600 disabled:opacity-50"
+							onclick={(e) => {
+								e.stopPropagation();
+								togglePlayPause();
+							}}
+							disabled={!hasStates}
+							title={isPlaying ? 'Pause' : 'Play'}
+						>
+							{#if isPlaying}
+								<span class="text-xs">❚❚</span>
+							{:else}
+								<Icon iconName="play" width={12} height={12} />
+							{/if}
+						</button>
+
+						<button
+							class="flex h-6 w-6 items-center justify-center rounded bg-gray-100 text-xs text-gray-600 transition-colors hover:bg-gray-200"
+							onclick={(e) => {
+								e.stopPropagation();
+								nextFrame();
+							}}
+							title="Next frame"
+						>
+							▶
+						</button>
+
+						<button
+							class="flex h-6 w-6 items-center justify-center rounded bg-gray-100 text-xs text-gray-600 transition-colors hover:bg-gray-200 disabled:opacity-50"
+							onclick={(e) => {
+								e.stopPropagation();
+								setFrame(totalFrames - 1);
+							}}
+							disabled={currentFrameIndex === totalFrames - 1}
+							title="Go to end"
+						>
+							⏭
+						</button>
+					</div>
+
+					<!-- Frame Timeline (clickable) -->
+					<!-- 프레임 타임라인 (클릭 가능) -->
+					<div class="flex items-center justify-center gap-1 overflow-x-auto py-1">
+						{#each Array(totalFrames) as _, index (index)}
+							<button
+								class="h-2 w-2 min-w-2 flex-shrink-0 rounded-full border transition-all {currentFrameIndex ===
+								index
+									? 'border-blue-500 bg-blue-500'
+									: 'border-gray-300 bg-gray-100 hover:bg-gray-200'}"
+								onclick={(e) => {
+									e.stopPropagation();
+									setFrame(index);
+								}}
+								title="Frame {index + 1}"
+								aria-label="Go to frame {index + 1}"
+							></button>
+						{/each}
+					</div>
 				</div>
 			</div>
-
-			<!-- Control Buttons -->
-			<!-- 컨트롤 버튼 -->
-			<div class="flex items-center justify-center gap-1">
-				<button
-					class="flex h-7 w-7 items-center justify-center rounded bg-gray-100 font-mono text-xs text-gray-600 transition-colors hover:bg-gray-200 disabled:opacity-50"
-					onclick={resetToStart}
-					disabled={currentFrameIndex === 0}
-					title="Reset to start"
-				>
-					⏮
-				</button>
-
-				<button
-					class="flex h-7 w-7 items-center justify-center rounded bg-gray-100 font-mono text-xs text-gray-600 transition-colors hover:bg-gray-200"
-					onclick={previousFrame}
-					title="Previous frame"
-				>
-					◀
-				</button>
-
-				<button
-					class="flex h-8 w-8 items-center justify-center rounded bg-blue-500 font-mono text-xs text-white transition-colors hover:bg-blue-600"
-					onclick={togglePlayPause}
-					title={isPlaying ? 'Pause' : 'Play'}
-				>
-					{#if isPlaying}
-						⏸
-					{:else}
-						<Icon iconName="play" width={14} height={14} />
-					{/if}
-				</button>
-
-				<button
-					class="flex h-7 w-7 items-center justify-center rounded bg-gray-100 font-mono text-xs text-gray-600 transition-colors hover:bg-gray-200"
-					onclick={nextFrame}
-					title="Next frame"
-				>
-					▶
-				</button>
-
-				<button
-					class="flex h-7 w-7 items-center justify-center rounded bg-gray-100 font-mono text-xs text-gray-600 transition-colors hover:bg-gray-200 disabled:opacity-50"
-					onclick={() => setFrame(totalFrames - 1)}
-					disabled={currentFrameIndex === totalFrames - 1}
-					title="Go to end"
-				>
-					⏭
-				</button>
-			</div>
-
-			<!-- Frame Timeline (clickable) -->
-			<!-- 프레임 타임라인 (클릭 가능) -->
-			<div class="flex gap-1 overflow-x-auto">
-				{#each states as _, index (index)}
-					<button
-						class="h-3 w-3 min-w-3 rounded-full border transition-all {currentFrameIndex === index
-							? 'border-blue-500 bg-blue-500'
-							: 'border-gray-300 bg-gray-100 hover:bg-gray-200'}"
-						onclick={() => setFrame(index)}
-						title="Frame {index + 1}"
-						aria-label="Go to frame {index + 1}"
-					></button>
-				{/each}
-			</div>
-		</div>
-	{/if}
-</div>
+		{/if}
+	</div>
+{/if}
