@@ -33,7 +33,7 @@
 	function handleCandidateClick(candidate: MapCandidate) {
 		selectedCandidate = candidate;
 
-		if (animationConfig.selectionAnimationMode && candidate.states.length > 1) {
+		if ($animationConfig.selectionAnimationMode && candidate.states.length > 1) {
 			// Play selection animation
 			isPlayingSelectionAnimation = true;
 			selectionAnimationStates = candidate.states;
@@ -149,14 +149,14 @@
 								<!-- 1:1 aspect ratio container for consistent grid layout -->
 								<!-- 일관된 그리드 레이아웃을 위한 1:1 비율 컨테이너 -->
 								<div class="aspect-square">
-									{#if animationConfig.candidateAnimationMode && candidate.states && candidate.states.length > 1}
+									{#if $animationConfig.candidateAnimationMode && candidate.states && candidate.states.length > 1}
 										<!-- Show animation if multiple states are available and animation mode is enabled -->
 										<!-- 여러 상태가 있고 애니메이션 모드가 활성화된 경우 애니메이션 표시 -->
 										<MapAnimation
 											states={candidate.states}
 											showBorders={true}
 											editMode={true}
-											interval={animationConfig.candidateAnimationInterval}
+											interval={$animationConfig.candidateAnimationInterval}
 											autoPlay={false}
 										/>
 									{:else}
@@ -201,7 +201,7 @@
 							states={selectionAnimationStates}
 							showBorders={true}
 							editMode={true}
-							interval={animationConfig.selectionAnimationInterval}
+							interval={$animationConfig.selectionAnimationInterval}
 							autoPlay={true}
 							onFrameChange={(frameIndex, state) => {
 								// Update mapState during animation for live preview
