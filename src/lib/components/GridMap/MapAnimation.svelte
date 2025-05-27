@@ -256,6 +256,7 @@
 							: 'border-gray-300 bg-gray-100 hover:bg-gray-200'}"
 						onclick={() => setFrame(index)}
 						title="Frame {index + 1}"
+						aria-label="Go to frame {index + 1}"
 					></button>
 				{/each}
 			</div>
