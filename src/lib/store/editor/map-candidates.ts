@@ -30,6 +30,7 @@ export type MapCandidate = {
 	map: GridMap;
 	instruction: string;
 	episodeId: string;
+	states: GridMap[]; // 전체 state 배열 (애니메이션용)
 };
 
 /**
@@ -43,6 +44,7 @@ export type MapCandidate = {
  *   console.log('Available maps:', candidates.length);
  *   candidates.forEach(candidate => {
  *     console.log('Map instruction:', candidate.instruction);
+ *     console.log('Animation frames:', candidate.states.length);
  *   });
  * });
  * ```
@@ -89,6 +91,7 @@ export const mapCandidates = derived(
 						map: lastState,
 						instruction: episodeData.instruction,
 						episodeId: key,
+						states: episodeData.state, // 전체 state 배열 추가
 					});
 				}
 			}

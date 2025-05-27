@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Grid from '$lib/components/GridMap/Grid.svelte';
+	import MapAnimation from '$lib/components/GridMap/MapAnimation.svelte';
 	import { mapState } from '$lib/store/editor';
 	import {
 		mapCandidates,
@@ -112,7 +113,21 @@
 								<!-- 1:1 aspect ratio container for consistent grid layout -->
 								<!-- 일관된 그리드 레이아웃을 위한 1:1 비율 컨테이너 -->
 								<div class="aspect-square">
-									<Grid gridMap={candidate.map} showBorders={true} editMode />
+									{#if candidate.states && candidate.states.length > 1}
+										<!-- Show animation if multiple states are available -->
+										<!-- 여러 상태가 있는 경우 애니메이션 표시 -->
+										<MapAnimation
+											states={candidate.states}
+											showBorders={true}
+											editMode={true}
+											interval={600}
+											autoPlay={false}
+										/>
+									{:else}
+										<!-- Show static grid if only one state or no animation data -->
+										<!-- 상태가 하나뿐이거나 애니메이션 데이터가 없는 경우 정적 그리드 표시 -->
+										<Grid gridMap={candidate.map} showBorders={true} editMode />
+									{/if}
 								</div>
 								<!-- Instruction label displayed below the grid -->
 								<!-- 그리드 아래에 표시되는 Instruction 라벨 -->
