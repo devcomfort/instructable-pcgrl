@@ -48,6 +48,79 @@
 	let suggestedMessages: string[] = $state([]);
 	let isLoadingAPI: boolean = $state(false); // API loading state variable
 
+	// Speech Recognition
+	let recognition: SpeechRecognition | null = $state(null);
+	if (
+		typeof window !== 'undefined' &&
+		(window.SpeechRecognition || window.webkitSpeechRecognition)
+	) {
+		const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
+		if (SpeechRecognitionAPI) {
+			recognition = new SpeechRecognitionAPI();
+			if (recognition) {
+				recognition.continuous = false; // Stop after one recognition session
+				recognition.interimResults = true; // Enable interim results
+				recognition.lang = 'en-US'; // Set language to US English
+
+				recognition.onresult = (event: SpeechRecognitionEvent) => {
+					let interimTranscript = '';
+					for (let i = event.resultIndex; i < event.results.length; ++i) {
+						if (event.results[i].isFinal) {
+							const finalTranscript = event.results[i][0].transcript;
+							messageInput = finalTranscript; // Update messageInput with the final result
+							handleInput(); // Update textarea height
+							isRecording = false; // Stop recording after the final result
+							console.log('[Chat] Speech recognition final result:', finalTranscript);
+							// If needed, call the message sending logic directly here
+							// handleSendMessage();
+						} else {
+							interimTranscript += event.results[i][0].transcript;
+						}
+					}
+					// Display interim results in messageInput for a preview effect
+					if (interimTranscript && !event.results[event.results.length - 1].isFinal) {
+						messageInput = interimTranscript;
+						handleInput();
+						console.info('[Chat] Speech recognition interim result:', interimTranscript); // Log interim result
+					}
+				};
+
+				recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+					console.error('[Chat] Speech recognition error:', event.error, 'Message:', event.message);
+					// Optionally, add a message to inform the user about the error
+					// e.g.: messages.push({ id: crypto.randomUUID(), text: `Speech recognition error: ${event.error}`, timestamp: new Date(), isUser: false });
+					isRecording = false;
+				};
+
+				recognition.onend = () => {
+					// isRecording state is already handled in onresult (isFinal) or onerror
+					// This onend is called on recognition.stop() or when it ends automatically
+					if (isRecording) {
+						// If stop() was not explicitly called and there was no isFinal result before ending
+						isRecording = false;
+					}
+					console.info('[Chat] Speech recognition service ended.');
+				};
+
+				// Additional event logging
+				recognition.onaudiostart = () => console.info('[Chat] Audio capture started.');
+				recognition.onaudioend = () => console.info('[Chat] Audio capture ended.');
+				recognition.onsoundstart = () => console.info('[Chat] Sound detected.');
+				recognition.onsoundend = () => console.info('[Chat] Sound stopped being detected.');
+				recognition.onspeechstart = () => console.info('[Chat] Speech detected.');
+				recognition.onspeechend = () => console.info('[Chat] Speech stopped being detected.');
+				recognition.onstart = () => console.info('[Chat] Speech recognition service started.');
+			} else {
+				console.warn('[Chat] Failed to create SpeechRecognition instance.');
+			}
+		} else {
+			console.warn('[Chat] Speech Recognition API constructor is not available.');
+		}
+	} else {
+		console.warn('[Chat] Speech Recognition API is not supported in this browser.');
+		// Handle API not supported: disable microphone button or notify user
+	}
+
 	// Message history for chat display
 	const messages: Array<{
 		id: string;
@@ -179,15 +252,29 @@
 	 * Placeholder for future voice input functionality.
 	 */
 	function handleMicrophoneToggle() {
-		isRecording = !isRecording;
+		if (!recognition) {
+			console.warn('[Chat] Speech Recognition is not initialized or not supported.');
+			// Optionally, display a message to the user that API is not supported
+			// e.g.: messages.push({ id: crypto.randomUUID(), text: 'Voice input is not supported in this browser.', timestamp: new Date(), isUser: false });
+			return;
+		}
 
-		// TODO: Implement speech recognition API integration
 		if (isRecording) {
-			console.log('[Chat] Starting voice recording...');
-			// Future: Start speech recognition
+			recognition.stop();
+			// isRecording will be set to false by the onend or onresult (isFinal) or onerror event handlers
+			console.log('[Chat] Stopping voice recording manually...');
 		} else {
-			console.log('[Chat] Stopping voice recording...');
-			// Future: Stop speech recognition and process result
+			try {
+				recognition.start();
+				// isRecording will be set to true by the onstart event handler,
+				// but we set it here preemptively for UI responsiveness.
+				isRecording = true;
+				console.log('[Chat] Starting voice recording...');
+			} catch (error) {
+				console.error('[Chat] Error starting speech recognition:', error);
+				isRecording = false;
+				// Optionally, add a message to inform the user about the error
+			}
 		}
 	}
 
@@ -429,7 +516,7 @@
 				data-testid="recording-indicator"
 			>
 				<div class="h-2 w-2 animate-pulse rounded-full bg-red-600"></div>
-				<span>Recording... (Feature coming soon)</span>
+				<span>{recognition ? 'Recording...' : 'Voice input not available'}</span>
 			</div>
 		{/if}
 	</div>
