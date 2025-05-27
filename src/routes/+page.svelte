@@ -1,25 +1,57 @@
 <script lang="ts">
 	import Grid from '$lib/components/GridMap/Grid.svelte';
 	import MapAnimation from '$lib/components/GridMap/MapAnimation.svelte';
+	import type { GridMap } from '$lib/core/grid-map';
 	import { mapState } from '$lib/store/editor';
 	import {
 		mapCandidates,
 		type MapCandidate,
 		currentMapInstruction
 	} from '$lib/store/editor/map-candidates';
+	import { animationConfig } from '$lib/utils/env';
+
+	// Selection animation state
+	let isPlayingSelectionAnimation = $state(false);
+	let selectionAnimationStates: GridMap[] = $state([]);
+	let selectedCandidate: MapCandidate | null = $state(null);
 
 	/**
 	 * Handle clicking on a map candidate
 	 * Updates the current mapState with the selected candidate
+	 * Optionally plays selection animation if enabled
 	 *
 	 * ---
 	 *
 	 * 맵 후보 클릭 처리
 	 * 선택된 후보로 현재 mapState를 업데이트합니다
+	 * 선택 애니메이션이 활성화된 경우 애니메이션을 재생합니다
 	 */
 	function handleCandidateClick(candidate: MapCandidate) {
-		mapState.set(candidate.map);
-		console.log('[Page] Map candidate selected and mapState updated');
+		selectedCandidate = candidate;
+
+		if (animationConfig.selectionAnimationMode && candidate.states.length > 1) {
+			// Play selection animation
+			isPlayingSelectionAnimation = true;
+			selectionAnimationStates = candidate.states;
+			console.log('[Page] Playing selection animation with', candidate.states.length, 'frames');
+		} else {
+			// Direct update without animation
+			mapState.set(candidate.map);
+			console.log('[Page] Map candidate selected and mapState updated (no animation)');
+		}
+	}
+
+	/**
+	 * Handle selection animation completion
+	 * 선택 애니메이션 완료 처리
+	 */
+	function handleSelectionAnimationComplete() {
+		if (selectedCandidate) {
+			mapState.set(selectedCandidate.map);
+			isPlayingSelectionAnimation = false;
+			selectionAnimationStates = [];
+			console.log('[Page] Selection animation completed, mapState updated');
+		}
 	}
 </script>
 
@@ -113,9 +145,9 @@
 								<!-- 1:1 aspect ratio container for consistent grid layout -->
 								<!-- 일관된 그리드 레이아웃을 위한 1:1 비율 컨테이너 -->
 								<div class="aspect-square">
-									{#if candidate.states && candidate.states.length > 1}
-										<!-- Show animation if multiple states are available -->
-										<!-- 여러 상태가 있는 경우 애니메이션 표시 -->
+									{#if animationConfig.candidateAnimationMode && candidate.states && candidate.states.length > 1}
+										<!-- Show animation if multiple states are available and animation mode is enabled -->
+										<!-- 여러 상태가 있고 애니메이션 모드가 활성화된 경우 애니메이션 표시 -->
 										<MapAnimation
 											states={candidate.states}
 											showBorders={true}
@@ -124,8 +156,8 @@
 											autoPlay={false}
 										/>
 									{:else}
-										<!-- Show static grid if only one state or no animation data -->
-										<!-- 상태가 하나뿐이거나 애니메이션 데이터가 없는 경우 정적 그리드 표시 -->
+										<!-- Show static grid if only one state, no animation data, or animation mode disabled -->
+										<!-- 상태가 하나뿐이거나, 애니메이션 데이터가 없거나, 애니메이션 모드가 비활성화된 경우 정적 그리드 표시 -->
 										<Grid gridMap={candidate.map} showBorders={true} editMode />
 									{/if}
 								</div>
@@ -156,9 +188,38 @@
 		<!-- Full Map Display Area - No scrolling, shows entire map -->
 		<!-- 전체 맵 표시 영역 - 스크롤 없이 전체 맵 표시 -->
 		<div class="min-h-0 flex-1 overflow-hidden">
-			{#if $mapState}
-				<!-- Flex layout for map and instruction -->
-				<!-- 맵과 instruction을 위한 Flex 레이아웃 -->
+			{#if isPlayingSelectionAnimation && selectionAnimationStates.length > 0}
+				<!-- Show selection animation -->
+				<!-- 선택 애니메이션 표시 -->
+				<div class="flex h-full flex-col gap-4">
+					<div class="min-h-0 flex-1">
+						<MapAnimation
+							states={selectionAnimationStates}
+							showBorders={true}
+							editMode={true}
+							interval={400}
+							autoPlay={true}
+							onFrameChange={(frameIndex, state) => {
+								// Update mapState during animation for live preview
+								mapState.set(state);
+								// Check if animation is complete
+								if (frameIndex === selectionAnimationStates.length - 1) {
+									// Wait a bit before completing animation
+									setTimeout(handleSelectionAnimationComplete, 800);
+								}
+							}}
+						/>
+					</div>
+					<!-- Show animation status -->
+					<!-- 애니메이션 상태 표시 -->
+					<div class="flex-shrink-0 rounded-lg bg-blue-50 p-3 text-sm">
+						<span class="font-medium text-blue-600">Playing Selection Animation</span>
+						<p class="mt-1 text-blue-800">Showing how the AI agent reached this solution...</p>
+					</div>
+				</div>
+			{:else if $mapState}
+				<!-- Normal map display -->
+				<!-- 일반 맵 표시 -->
 				<div class="flex h-full flex-col gap-4">
 					<!-- Map container that fills most of the available space -->
 					<!-- 사용 가능한 공간의 대부분을 차지하는 맵 컨테이너 -->
