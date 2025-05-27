@@ -6,12 +6,8 @@ export default {
 	content: ["./src/**/*.{html,js,svelte,ts}"],
 
 	theme: {
-		extend: {
-			fontFamily: {
-				pixel: ['"Press Start 2P"', "cursive"],
-			},
-		},
+		extend: {},
 	},
 
-	plugins: [typography(), daisyui()],
-} as Config;
+	plugins: [typography, daisyui],
+} satisfies Config;
