@@ -74,6 +74,7 @@ export const mapCandidates = derived(
 		const candidates: MapCandidate[] = [];
 		for (const key of episodeKeys) {
 			const episodeData = latestResponse[key];
+
 			// episodeData가 실제 EpisodeData 타입인지, state 배열이 있는지, 비어있지 않은지 확인
 			if (
 				episodeData &&
