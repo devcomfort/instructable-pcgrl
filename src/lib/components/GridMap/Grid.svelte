@@ -7,6 +7,7 @@
 	import { showBorders as showBorders_ } from '$lib/store/editor';
 	import { selectedTile } from '$lib/store/editor/selected-tile';
 	import { mapState } from '$lib/store/editor/map-state';
+	import { activeTab } from '$lib/store/editor/active-tab';
 	import { twMerge } from 'tailwind-merge';
 
 	const {
@@ -116,9 +117,14 @@
 	/**
 	 * Handle cell interaction for editing mode.
 	 * Updates the map state with the selected tile if edit mode is enabled.
+	 * Now also checks if the Edit tab is currently active.
+	 *
+	 * Edit 모드일 때 셀 상호작용을 처리합니다.
+	 * 선택된 타일로 맵 상태를 업데이트하며, Edit 탭이 현재 활성화되어 있는지도 확인합니다.
 	 */
 	function handleCellInteraction(gridRowIndex: number, gridColIndex: number) {
-		if (!editMode || !$selectedTile) return;
+		// Check if edit mode is enabled, selected tile exists, and Edit tab is active
+		if (!editMode || !$selectedTile || $activeTab !== 'edit') return;
 
 		// Calculate actual map coordinates, considering borders
 		let mapRowIndex = gridRowIndex;
@@ -160,7 +166,8 @@
 	 * Handle mouse down event on a cell
 	 */
 	function handleMouseDown(gridRowIndex: number, gridColIndex: number) {
-		if (!editMode) return;
+		// Check if edit mode is enabled and Edit tab is active
+		if (!editMode || $activeTab !== 'edit') return;
 		isMouseDown = true;
 		handleCellInteraction(gridRowIndex, gridColIndex);
 	}
@@ -169,7 +176,8 @@
 	 * Handle mouse enter event on a cell (for drag painting)
 	 */
 	function handleMouseEnter(gridRowIndex: number, gridColIndex: number) {
-		if (!editMode || !isMouseDown) return;
+		// Check if edit mode is enabled, mouse is down, and Edit tab is active
+		if (!editMode || !isMouseDown || $activeTab !== 'edit') return;
 		handleCellInteraction(gridRowIndex, gridColIndex);
 	}
 
