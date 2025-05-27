@@ -8,12 +8,16 @@
 		type MapCandidate,
 		currentMapInstruction
 	} from '$lib/store/editor/map-candidates';
-	import { animationConfig } from '$lib/utils/env';
+	import { animationConfig, logAnimationConfig } from '$lib/utils/env';
 
 	// Selection animation state
 	let isPlayingSelectionAnimation = $state(false);
 	let selectionAnimationStates: GridMap[] = $state([]);
 	let selectedCandidate: MapCandidate | null = $state(null);
+
+	// Log animation configuration on component load
+	// 컴포넌트 로드 시 애니메이션 설정 로그 출력
+	logAnimationConfig();
 
 	/**
 	 * Handle clicking on a map candidate
@@ -152,7 +156,7 @@
 											states={candidate.states}
 											showBorders={true}
 											editMode={true}
-											interval={600}
+											interval={animationConfig.candidateAnimationInterval}
 											autoPlay={false}
 										/>
 									{:else}
@@ -197,7 +201,7 @@
 							states={selectionAnimationStates}
 							showBorders={true}
 							editMode={true}
-							interval={400}
+							interval={animationConfig.selectionAnimationInterval}
 							autoPlay={true}
 							onFrameChange={(frameIndex, state) => {
 								// Update mapState during animation for live preview
