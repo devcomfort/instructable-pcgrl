@@ -7,6 +7,7 @@
 
 	const {
 		states = [],
+		agentPositions = undefined,
 		showBorders = true,
 		editMode = false,
 		interval = 500,
@@ -21,6 +22,12 @@
 		 * 애니메이션할 GridMap 상태들의 배열
 		 */
 		states: GridMap[];
+
+		/**
+		 * Array of agent positions for each frame
+		 * 각 프레임에 대한 에이전트 위치 배열
+		 */
+		agentPositions?: Array<[number, number]>;
 
 		/**
 		 * Whether to show borders around the grid
@@ -78,6 +85,11 @@
 
 	// Current state to display
 	const currentState = $derived(states[currentFrameIndex] || null);
+	const currentAgentPosForFrame = $derived(
+		agentPositions && currentFrameIndex < agentPositions.length
+			? agentPositions[currentFrameIndex]
+			: null
+	);
 	const totalFrames = $derived(states.length);
 	const hasStates = $derived(states.length > 1);
 
@@ -176,6 +188,18 @@
 		if (!hasStates && isPlaying) {
 			stopAnimation();
 		}
+		if (
+			import.meta.env.DEV &&
+			agentPositions &&
+			states &&
+			agentPositions.length !== states.length &&
+			states.length > 0 &&
+			agentPositions.length > 0
+		) {
+			console.warn(
+				`[MapAnimation] Mismatch between states length (${states.length}) and agentPositions length (${agentPositions.length}). Agent highlighting may be inconsistent.`
+			);
+		}
 	});
 </script>
 
@@ -184,7 +208,7 @@
 	<!-- 그리드 전용 모드 - 래퍼 없이 그리드만 표시 -->
 	<div class={userClass}>
 		{#if currentState}
-			<Grid gridMap={currentState} {showBorders} {editMode} />
+			<Grid gridMap={currentState} {showBorders} {editMode} agentPos={currentAgentPosForFrame} />
 		{:else}
 			<div
 				class="flex aspect-square items-center justify-center rounded border-2 border-dashed border-gray-300 bg-gray-50"
@@ -201,7 +225,7 @@
 		<!-- 그리드 표시 영역 - 대부분의 공간을 차지 -->
 		<div class="mb-2 min-h-0 flex-1">
 			{#if currentState}
-				<Grid gridMap={currentState} {showBorders} {editMode} />
+				<Grid gridMap={currentState} {showBorders} {editMode} agentPos={currentAgentPosForFrame} />
 			{:else}
 				<div
 					class="flex aspect-square items-center justify-center rounded border-2 border-dashed border-gray-300 bg-gray-50"

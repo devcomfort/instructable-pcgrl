@@ -15,6 +15,7 @@
 		mapSize = null,
 		showBorders = $showBorders_,
 		editMode = false,
+		agentPos = null,
 		class: userClass = ''
 	} = $props<{
 		/**
@@ -58,6 +59,15 @@
 		 * true일 때 클릭과 드래그로 타일을 수정할 수 있음.
 		 */
 		editMode?: boolean;
+
+		/**
+		 * Agent position in the grid.
+		 *
+		 * ---
+		 *
+		 * 그리드에서의 에이전트 위치.
+		 */
+		agentPos?: [number, number] | null;
 
 		/**
 		 * Additional CSS classes to apply to the grid container.
@@ -192,6 +202,72 @@
 	const gridRows = $derived(completeGrid.length);
 	const gridCols = $derived(completeGrid[0]?.length || 0);
 
+	// 디버깅: agentPos prop 변경 감지 (개발 환경에서만)
+	$effect(() => {
+		if (import.meta.env.DEV) {
+			if (agentPos) {
+				// console.log('[Grid] Agent position prop updated:', agentPos, `Grid size: ${gridRows}x${gridCols}`);
+			}
+		}
+	});
+
+	/**
+	 * Check if a grid cell is at the agent position.
+	 * Takes grid indices (which might include border cells) as input.
+	 */
+	function isAgentPosition(gridRowIdx: number, gridColIdx: number): boolean {
+		if (!agentPos) return false;
+
+		const [agentMapRow, agentMapCol] = agentPos; // agentPos는 실제 맵 좌표
+
+		// Convert grid indices to map indices if borders are shown
+		const mapRow = showBorders ? gridRowIdx - 1 : gridRowIdx;
+		const mapCol = showBorders ? gridColIdx - 1 : gridColIdx;
+
+		// Borders themselves cannot be agent positions if showBorders is true
+		// Also, ensure the converted map coordinates are valid for the original map dimensions
+		if (showBorders) {
+			if (
+				gridRowIdx === 0 ||
+				gridRowIdx === gridRows - 1 ||
+				gridColIdx === 0 ||
+				gridColIdx === gridCols - 1
+			) {
+				return false; // Click on border itself
+			}
+			// Ensure agentMapRow/Col are valid for the non-bordered map
+			if (
+				agentMapRow < 0 ||
+				agentMapRow >= gridRows - 2 ||
+				agentMapCol < 0 ||
+				agentMapCol >= gridCols - 2
+			) {
+				// This case should ideally not happen if agentPos is always correct for the *original* map
+				// but as a safeguard:
+				if (import.meta.env.DEV) {
+					// console.warn("[Grid] agentPos seems to be outside the actual map boundaries when considering borders.", agentPos, `map: ${(gridRows-2)}x${(gridCols-2)}`);
+				}
+				return false;
+			}
+		} else {
+			// No borders, agentMapRow/Col must be valid for the grid itself
+			if (
+				agentMapRow < 0 ||
+				agentMapRow >= gridRows ||
+				agentMapCol < 0 ||
+				agentMapCol >= gridCols
+			) {
+				if (import.meta.env.DEV) {
+					// console.warn("[Grid] agentPos seems to be outside the grid boundaries (no borders).", agentPos, `grid: ${gridRows}x${gridCols}`);
+				}
+				return false;
+			}
+		}
+
+		const isAgent = mapRow === agentMapRow && mapCol === agentMapCol;
+		return isAgent;
+	}
+
 	/**
 	 * Value for the CSS grid-template-columns property.
 	 * Defines the number of grid columns and the size of each column (e.g., "repeat(10, minmax(0, 1fr))").
@@ -235,13 +311,17 @@
 		{#each completeGrid.flat() as tileValue, index (index)}
 			{@const rowIndex = Math.floor(index / gridCols)}
 			{@const colIndex = index % gridCols}
+			{@const isAgentCell = isAgentPosition(rowIndex, colIndex)}
 			<GridCell
 				pos={{ u: colIndex, v: rowIndex }}
 				tileName={tileValue}
 				onmousedown={() => handleMouseDown(rowIndex, colIndex)}
 				onmouseenter={() => handleMouseEnter(rowIndex, colIndex)}
 				onmouseup={handleMouseUp}
-				class={editMode ? 'cursor-pointer' : ''}
+				class={twMerge(
+					editMode ? 'cursor-pointer' : '',
+					isAgentCell ? 'border-2 border-white shadow-lg' : '' // Tailwind CSS로 2px 흰색 테두리 및 그림자 적용
+				)}
 			/>
 		{/each}
 	</div>

@@ -1,23 +1,20 @@
 <script lang="ts">
 	import Grid from '$lib/components/GridMap/Grid.svelte';
-	import AnimationControls from '$lib/components/GridMap/AnimationControls.svelte';
 	import MapAnimation from '$lib/components/GridMap/MapAnimation.svelte';
 	import SimpleProgressBar from '$lib/components/GridMap/SimpleProgressBar.svelte';
 	import type { GridMap } from '$lib/core/grid-map';
 	import { mapState } from '$lib/store/editor';
-	import {
-		mapCandidates,
-		type MapCandidate,
-		currentMapInstruction as pageCurrentMapInstructionStore
-	} from '$lib/store/editor/map-candidates';
+	import { mapCandidates, type MapCandidate } from '$lib/store/editor/map-candidates';
 	import { animationConfig, logAnimationConfig } from '$lib/utils/env';
 	import { onDestroy } from 'svelte';
 
 	// Selection animation state
 	let isPlayingSelectionAnimation = $state(false);
 	let selectionAnimationStates: GridMap[] = $state([]);
+	let selectionAnimationAgentPositions: Array<[number, number]> = $state([]);
 	let selectedCandidate: MapCandidate | null = $state(null);
 	let currentAnimationFrameIndex = $state(0);
+	let currentAnimationAgentPos = $state<[number, number] | null>(null);
 	let animationTimer: ReturnType<typeof setInterval> | null = null;
 	let pendingCompletionTimeout: ReturnType<typeof setTimeout> | null = null;
 
@@ -35,6 +32,27 @@
 	// Log animation configuration on component load
 	logAnimationConfig();
 
+	// 환경 변수에 따라, 실제 agent_pos 데이터가 없을 경우 표시할 임시 에이전트 위치
+	const agentPosForDisplayIfDataMissing = $derived.by(() => {
+		if (
+			$animationConfig.showAgentPosition &&
+			!currentAnimationAgentPos &&
+			$mapState &&
+			$mapState.length > 0 &&
+			$mapState[0].length > 0
+		) {
+			const centerRow = Math.floor($mapState.length / 2);
+			const centerCol = Math.floor($mapState[0].length / 2);
+			if (import.meta.env.DEV)
+				console.log('[Page] Displaying agent position at center (env enabled, no data):', [
+					centerRow,
+					centerCol
+				]);
+			return [centerRow, centerCol] as [number, number];
+		}
+		return null;
+	});
+
 	/**
 	 * Handle clicking on a map candidate
 	 * Updates the current mapState with the selected candidate
@@ -47,32 +65,40 @@
 	 * 선택 애니메이션이 활성화된 경우 애니메이션을 재생합니다
 	 */
 	function handleCandidateClick(candidate: MapCandidate) {
-		// 이전 애니메이션과 완료 타이머 정리
-		stopSelectionAnimation();
-
+		stopSelectionAnimation(true);
 		selectedCandidate = candidate;
 
 		if ($animationConfig.selectionAnimationMode && candidate.states.length > 1) {
-			// Setup new animation
 			selectionAnimationStates = candidate.states;
+			selectionAnimationAgentPositions = candidate.agentPositions || [];
 			currentAnimationFrameIndex = 0;
 			setAnimationFrame(0);
-
-			// Start animation
 			startSelectionAnimation();
-			console.log(
-				'[Page] Playing selection animation with',
-				candidate.states.length,
-				'frames for instruction:',
-				candidate.instruction
-			);
+			if (import.meta.env.DEV) {
+				console.log(
+					'[Page] Playing selection animation with',
+					candidate.states.length,
+					'frames. Agent positions available:',
+					selectionAnimationAgentPositions.length > 0,
+					'Instruction:',
+					candidate.instruction
+				);
+			}
 		} else {
-			// Direct update without animation
 			mapState.set(candidate.map);
-			console.log(
-				'[Page] Map candidate selected and mapState updated (no animation) for instruction:',
-				candidate.instruction
-			);
+			if (candidate.agentPositions && candidate.agentPositions.length > 0) {
+				currentAnimationAgentPos = candidate.agentPositions.at(-1) ?? null;
+			} else {
+				currentAnimationAgentPos = null;
+			}
+			if (import.meta.env.DEV) {
+				console.log(
+					'[Page] Map candidate selected (no animation). Instruction:',
+					candidate.instruction,
+					'Final agentPos:',
+					currentAnimationAgentPos
+				);
+			}
 		}
 	}
 
@@ -83,8 +109,13 @@
 	function handleSelectionAnimationComplete() {
 		if (selectedCandidate) {
 			mapState.set(selectedCandidate.map);
-			stopSelectionAnimation();
-			console.log('[Page] Selection animation completed, mapState updated');
+			stopSelectionAnimation(false);
+			if (import.meta.env.DEV) {
+				console.log(
+					'[Page] Selection animation completed. mapState updated. Final agentPos:',
+					currentAnimationAgentPos
+				);
+			}
 		}
 	}
 
@@ -96,14 +127,12 @@
 		if (selectionAnimationStates.length <= 1) return;
 
 		isPlayingSelectionAnimation = true;
-		// 이전 타이머가 있다면 확실히 제거 (안전장치)
 		if (animationTimer) {
 			clearInterval(animationTimer);
 			animationTimer = null;
 		}
 
 		animationTimer = setInterval(() => {
-			// 애니메이션이 중단된 상태라면 더 이상 진행하지 않음
 			if (!isPlayingSelectionAnimation) {
 				if (animationTimer) {
 					clearInterval(animationTimer);
@@ -115,19 +144,14 @@
 			const nextFrameIndex = currentAnimationFrameIndex + 1;
 
 			if (nextFrameIndex >= selectionAnimationStates.length) {
-				// 마지막 프레임에 도달했으면 애니메이션 즉시 완료
 				if (animationTimer) {
 					clearInterval(animationTimer);
 					animationTimer = null;
 				}
-				// 화면에 마지막 프레임이 확실히 표시되도록 합니다.
 				setAnimationFrame(selectionAnimationStates.length - 1);
-
-				// 즉시 완료 처리 (setTimeout 제거)
 				isPlayingSelectionAnimation = false;
 				handleSelectionAnimationComplete();
 			} else {
-				// 다음 프레임으로 진행
 				setAnimationFrame(nextFrameIndex);
 			}
 		}, $animationConfig.selectionAnimationInterval);
@@ -137,7 +161,7 @@
 	 * Stop selection animation
 	 * 선택 애니메이션 정지
 	 */
-	function stopSelectionAnimation() {
+	function stopSelectionAnimation(resetAllStates = true) {
 		isPlayingSelectionAnimation = false;
 		if (animationTimer) {
 			clearInterval(animationTimer);
@@ -148,7 +172,10 @@
 			pendingCompletionTimeout = null;
 		}
 		currentAnimationFrameIndex = 0;
+		currentAnimationAgentPos = null;
 		selectionAnimationStates = [];
+		selectionAnimationAgentPositions = [];
+		selectedCandidate = null;
 	}
 
 	/**
@@ -156,9 +183,36 @@
 	 * 특정 애니메이션 프레임 설정
 	 */
 	function setAnimationFrame(frameIndex: number) {
-		if (frameIndex >= 0 && frameIndex < selectionAnimationStates.length) {
+		if (
+			selectionAnimationStates &&
+			frameIndex >= 0 &&
+			frameIndex < selectionAnimationStates.length
+		) {
 			currentAnimationFrameIndex = frameIndex;
 			mapState.set(selectionAnimationStates[frameIndex]);
+
+			if (
+				selectionAnimationAgentPositions &&
+				frameIndex < selectionAnimationAgentPositions.length
+			) {
+				currentAnimationAgentPos = selectionAnimationAgentPositions[frameIndex];
+			} else {
+				currentAnimationAgentPos = null;
+			}
+
+			if (import.meta.env.DEV) {
+				// console.log(
+				// 	`[Page] Set Frame ${frameIndex}. currentAnimationAgentPos: `,
+				// 	currentAnimationAgentPos
+				// );
+			}
+		} else if (
+			selectionAnimationStates &&
+			selectionAnimationStates.length === 0 &&
+			frameIndex === 0
+		) {
+			currentAnimationFrameIndex = 0;
+			currentAnimationAgentPos = null;
 		}
 	}
 
@@ -199,7 +253,7 @@
 
 	// Cleanup on component destroy
 	onDestroy(() => {
-		stopSelectionAnimation();
+		stopSelectionAnimation(true);
 	});
 </script>
 
@@ -302,14 +356,20 @@
 									{#if $animationConfig.candidateAnimationMode && candidate.states && candidate.states.length > 1}
 										<MapAnimation
 											states={candidate.states}
+											agentPositions={candidate.agentPositions}
 											showBorders={true}
-											editMode={true}
+											editMode={false}
 											showControls={true}
 											interval={$animationConfig.candidateAnimationInterval}
 											autoPlay={false}
 										/>
 									{:else}
-										<Grid gridMap={candidate.map} showBorders={true} editMode />
+										<Grid
+											gridMap={candidate.map}
+											showBorders={true}
+											editMode={false}
+											agentPos={candidate.agentPositions?.at(-1) ?? null}
+										/>
 									{/if}
 								</div>
 							</div>
@@ -368,6 +428,7 @@
 								showBorders={true}
 								class="h-full w-full"
 								editMode={!isPlayingSelectionAnimation}
+								agentPos={currentAnimationAgentPos || agentPosForDisplayIfDataMissing}
 							/>
 						</div>
 					{:else if $mapState}

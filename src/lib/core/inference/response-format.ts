@@ -56,6 +56,12 @@ const EpisodeDataSchema = z.object({
 });
 
 /**
+ * Type representing the data of a single simulation episode.
+ * This type is inferred from the {@link EpisodeDataSchema} Zod schema.
+ */
+export type EpisodeData = z.infer<typeof EpisodeDataSchema>;
+
+/**
  * Zod schema for validating the response format received from the inference server.
  * The server typically returns a predefined number of episodes (e.g., 3) unless specified otherwise.
  * Each episode contains sequences of actions, agent positions, an instruction, and game states.
