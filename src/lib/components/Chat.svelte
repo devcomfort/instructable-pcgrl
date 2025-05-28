@@ -442,7 +442,7 @@
 				{#each suggestedMessages as suggestion}
 					<button
 						type="button"
-						class="focus:ring-opacity-50 max-w-xs rounded-full bg-gray-200 px-3 py-1 text-left text-xs whitespace-normal text-gray-700 hover:bg-gray-300 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+						class="focus:ring-opacity-50 max-w-xs rounded-lg bg-gray-200 px-3 py-2 text-left text-xs whitespace-normal text-gray-700 transition-colors hover:bg-gray-300 focus:ring-2 focus:ring-blue-500 focus:outline-none"
 						onclick={() => handleSuggestedMessageClick(suggestion)}
 					>
 						{suggestion}
