@@ -1,7 +1,8 @@
 <script lang="ts">
-	import { defaultMapState, mapState } from '$lib/store/editor';
+	import { defaultMapState, mapState, mapSize } from '$lib/store/editor';
 	import { copyTextToClipboard } from '$lib/utils';
 	import toast from 'svelte-french-toast';
+	import { generateRandomMap } from '$lib/utils/map-utils';
 
 	import StepSizeController from './StepSizeController.svelte';
 	import History from './History.svelte';
@@ -16,6 +17,13 @@
 		} else {
 			toast.success('URL copied to clipboard.');
 		}
+	};
+
+	const handleGenerateRandomMap = () => {
+		const currentMapSize = $mapSize;
+		const randomMap = generateRandomMap(currentMapSize.gridSize);
+		mapState.set(randomMap);
+		toast.success('Random map generated.');
 	};
 </script>
 
@@ -42,6 +50,8 @@ Removes restrictive styling to allow maximum width usage
 		실행 취소/다시 실행을 위한 히스토리 컴포넌트입니다.
 	-->
 	<History />
+
+	<Button iconName="random" onclick={handleGenerateRandomMap} title="Generate Random Map" />
 
 	<Button
 		iconName="bin"
