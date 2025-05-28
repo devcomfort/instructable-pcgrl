@@ -19,6 +19,7 @@
 	let selectedCandidate: MapCandidate | null = $state(null);
 	let currentAnimationFrameIndex = $state(0);
 	let animationTimer: ReturnType<typeof setInterval> | null = null;
+	let pendingCompletionTimeout: ReturnType<typeof setTimeout> | null = null;
 
 	// biome-ignore lint/style/useConst: Svelte 5 문법 때문에 무시함.
 	let gridDisplayContainerWidth = $state(0);
@@ -46,12 +47,12 @@
 	 * 선택 애니메이션이 활성화된 경우 애니메이션을 재생합니다
 	 */
 	function handleCandidateClick(candidate: MapCandidate) {
+		// 이전 애니메이션과 완료 타이머 정리
+		stopSelectionAnimation();
+
 		selectedCandidate = candidate;
 
 		if ($animationConfig.selectionAnimationMode && candidate.states.length > 1) {
-			// Stop any existing animation first
-			stopSelectionAnimation();
-
 			// Setup new animation
 			selectionAnimationStates = candidate.states;
 			currentAnimationFrameIndex = 0;
@@ -114,16 +115,17 @@
 			const nextFrameIndex = currentAnimationFrameIndex + 1;
 
 			if (nextFrameIndex >= selectionAnimationStates.length) {
-				// 마지막 프레임에 도달했거나 넘어섰다면 애니메이션 즉시 종료 준비
+				// 마지막 프레임에 도달했으면 애니메이션 즉시 완료
 				if (animationTimer) {
-					clearInterval(animationTimer); // 타이머를 여기서 즉시 멈춤
+					clearInterval(animationTimer);
 					animationTimer = null;
 				}
 				// 화면에 마지막 프레임이 확실히 표시되도록 합니다.
 				setAnimationFrame(selectionAnimationStates.length - 1);
 
-				// 완료 처리 (0.8초 지연은 유지하되, 타이머는 이미 멈춘 상태)
-				setTimeout(handleSelectionAnimationComplete, 800);
+				// 즉시 완료 처리 (setTimeout 제거)
+				isPlayingSelectionAnimation = false;
+				handleSelectionAnimationComplete();
 			} else {
 				// 다음 프레임으로 진행
 				setAnimationFrame(nextFrameIndex);
@@ -140,6 +142,10 @@
 		if (animationTimer) {
 			clearInterval(animationTimer);
 			animationTimer = null;
+		}
+		if (pendingCompletionTimeout) {
+			clearTimeout(pendingCompletionTimeout);
+			pendingCompletionTimeout = null;
 		}
 		currentAnimationFrameIndex = 0;
 		selectionAnimationStates = [];

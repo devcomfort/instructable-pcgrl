@@ -5,9 +5,40 @@
 
 	// TODO: undo/redo를 시도할 때, 실패한다면 alert 등의 UX를 고려한 방법을 통해 알려줄 수 있으면 좋을 것 같아.
 
+	// URL 변화 감지를 위한 상태
+	let pendingOperation: { type: 'undo' | 'redo'; previousUrl: string } | null = $state(null);
+	let urlChangeTimeout: ReturnType<typeof setTimeout> | null = null;
+
 	// 페이지 로드 시 키보드 단축키 설정
 	onMount(() => {
 		if (typeof window !== 'undefined') {
+			// popstate 이벤트 리스너 추가
+			const handlePopState = () => {
+				if (pendingOperation) {
+					const currentUrl = window.location.href;
+					if (currentUrl !== pendingOperation.previousUrl) {
+						// URL이 변경되었으면 성공
+						toast.success(
+							pendingOperation.type === 'undo' ? 'Undone successfully.' : 'Redone successfully.'
+						);
+					} else {
+						// URL이 변경되지 않았으면 실패 (더 이상 이동할 히스토리가 없음)
+						toast.error(
+							pendingOperation.type === 'undo'
+								? 'No more states to undo.'
+								: 'No more states to redo.'
+						);
+					}
+
+					// 작업 완료 처리
+					pendingOperation = null;
+					if (urlChangeTimeout) {
+						clearTimeout(urlChangeTimeout);
+						urlChangeTimeout = null;
+					}
+				}
+			};
+
 			// 키보드 단축키 처리
 			const handleKeyDown = (event: KeyboardEvent) => {
 				// 입력 필드에서는 단축키 무시
@@ -36,41 +67,61 @@
 			};
 
 			window.addEventListener('keydown', handleKeyDown);
+			window.addEventListener('popstate', handlePopState);
 
 			return () => {
 				window.removeEventListener('keydown', handleKeyDown);
+				window.removeEventListener('popstate', handlePopState);
+				if (urlChangeTimeout) {
+					clearTimeout(urlChangeTimeout);
+				}
 			};
 		}
 	});
 
 	/**
-	 * URL 변화를 감지하여 undo/redo 성공 여부를 확인하고 toast를 표시
+	 * 히스토리 작업 대기 상태 설정 및 fallback 타이머 설정
 	 */
-	function detectUrlChangeAndToast(operation: 'undo' | 'redo', previousUrl: string) {
-		const checkUrlChange = () => {
-			const currentUrl = window.location.href;
-			if (currentUrl !== previousUrl) {
-				// URL이 변경되었으면 성공
-				toast.success(operation === 'undo' ? 'Undone successfully.' : 'Redone successfully.');
-			} else {
-				// URL이 변경되지 않았으면 실패 (더 이상 이동할 히스토리가 없음)
-				toast.error(operation === 'undo' ? 'No more states to undo.' : 'No more states to redo.');
-			}
-		};
+	function setPendingOperation(operation: 'undo' | 'redo', previousUrl: string) {
+		// 이전 작업이 있다면 정리
+		if (urlChangeTimeout) {
+			clearTimeout(urlChangeTimeout);
+		}
 
-		// 약간의 지연을 두고 URL 변화 확인 (브라우저 히스토리 이동 완료 대기)
-		setTimeout(checkUrlChange, 100);
+		pendingOperation = { type: operation, previousUrl };
+
+		// fallback: popstate가 발생하지 않을 경우를 대비한 타이머 (200ms)
+		urlChangeTimeout = setTimeout(() => {
+			if (pendingOperation) {
+				const currentUrl = window.location.href;
+				if (currentUrl !== pendingOperation.previousUrl) {
+					toast.success(
+						pendingOperation.type === 'undo' ? 'Undone successfully.' : 'Redone successfully.'
+					);
+				} else {
+					toast.error(
+						pendingOperation.type === 'undo' ? 'No more states to undo.' : 'No more states to redo.'
+					);
+				}
+				pendingOperation = null;
+			}
+		}, 200);
 	}
 
 	// undo 함수
 	function handleUndo() {
 		try {
 			const previousUrl = window.location.href;
+			setPendingOperation('undo', previousUrl);
 			history.back();
-			detectUrlChangeAndToast('undo', previousUrl);
 		} catch (e) {
 			console.error('Undo 실행 중 오류가 발생했습니다:', e);
 			toast.error('Failed to undo.');
+			pendingOperation = null;
+			if (urlChangeTimeout) {
+				clearTimeout(urlChangeTimeout);
+				urlChangeTimeout = null;
+			}
 		}
 	}
 
@@ -78,11 +129,16 @@
 	function handleRedo() {
 		try {
 			const previousUrl = window.location.href;
+			setPendingOperation('redo', previousUrl);
 			history.forward();
-			detectUrlChangeAndToast('redo', previousUrl);
 		} catch (e) {
 			console.error('Redo 실행 중 오류가 발생했습니다:', e);
 			toast.error('Failed to redo.');
+			pendingOperation = null;
+			if (urlChangeTimeout) {
+				clearTimeout(urlChangeTimeout);
+				urlChangeTimeout = null;
+			}
 		}
 	}
 </script>
