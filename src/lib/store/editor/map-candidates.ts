@@ -19,9 +19,8 @@
  */
 
 import type { GridMap } from "$lib/core/grid-map";
-import { derived } from "svelte/store";
+import { derived, writable } from "svelte/store";
 import { responseHistory } from "../chat/response-history";
-import { mapState } from "./map-state";
 import type { EpisodeData } from "$lib/core/inference/response-format"; // EpisodeData 타입 임포트
 
 /**
@@ -36,14 +35,40 @@ export type MapCandidate = {
 };
 
 /**
- * Derived store containing an array of MapCandidate objects
+ * Buffer to store the original map state before AI modifications
+ * This allows users to revert back to the original map
+ *
+ * ---
+ *
+ * AI 수정 전의 원본 맵 상태를 저장하는 버퍼
+ * 사용자가 원본 맵으로 되돌릴 수 있도록 합니다
+ */
+export const mapBuffer = writable<GridMap | null>(null);
+
+/**
+ * Function to capture the current map state as the original
+ * Call this before generating AI candidates
+ *
+ * ---
+ *
+ * 현재 맵 상태를 원본으로 캡처하는 함수
+ * AI 후보 생성 전에 호출하세요
+ */
+export function captureOriginalMap(currentMap: GridMap) {
+	// TODO: 데이터 복사 방식을 수정하는게 좋을 것 같음. (JSON 직렬화/역직렬화 방식은 생각보다 많은 자원을 소모함. 데이터 크기가 작아서 괜찮을 수도 있으니 검토 후 수정 여부 결정해야함)
+	mapBuffer.set(JSON.parse(JSON.stringify(currentMap))); // Deep copy
+}
+
+/**
+ * Derived store containing an array of MapCandidate objects from AI responses only
  * Each candidate includes the GridMap and its associated instruction
+ * This does NOT include the original map - that should be added at display time
  *
  * @example
  * ```typescript
  * // Subscribe to changes
  * mapCandidates.subscribe(candidates => {
- *   console.log('Available maps:', candidates.length);
+ *   console.log('Available AI maps:', candidates.length);
  *   candidates.forEach(candidate => {
  *     console.log('Map instruction:', candidate.instruction);
  *     console.log('Animation frames:', candidate.states.length);
@@ -54,109 +79,107 @@ export type MapCandidate = {
  *
  * ---
  *
- * GridMap 후보들과 해당 지시사항, 에이전트 위치 정보를 함께 담고 있는 파생 스토어
+ * AI 응답에서만 생성된 GridMap 후보들을 담고 있는 파생 스토어
+ * 원본 맵은 포함되지 않으며, 표시할 때 별도로 추가해야 합니다
  */
 export const mapCandidates = derived(
-	responseHistory,
-	($responseHistory): MapCandidate[] => {
+	[responseHistory],
+	([$responseHistory]): MapCandidate[] => {
+		const candidates: MapCandidate[] = [];
+
 		const latestResponse = $responseHistory.at(-1);
 
-		if (!latestResponse) {
-			return [];
-		}
+		if (latestResponse) {
+			const episodeKeys = Object.keys(latestResponse).filter(
+				(key) => key !== "response",
+			);
 
-		const episodeKeys = Object.keys(latestResponse).filter(
-			(key) => key !== "response",
-		);
+			for (const key of episodeKeys) {
+				const episodeDataUntyped = latestResponse[key];
 
-		if (episodeKeys.length === 0) {
-			return [];
-		}
-
-		const candidates: MapCandidate[] = [];
-		for (const key of episodeKeys) {
-			const episodeDataUntyped = latestResponse[key];
-
-			// episodeData의 기본 구조 및 필수 필드 확인
-			if (
-				episodeDataUntyped &&
-				typeof episodeDataUntyped === "object" &&
-				"state" in episodeDataUntyped &&
-				Array.isArray(episodeDataUntyped.state) &&
-				episodeDataUntyped.state.length > 0 &&
-				"instruction" in episodeDataUntyped &&
-				typeof episodeDataUntyped.instruction === "string"
-			) {
-				// agent_pos 필드가 있고 배열인지 확인 (없거나 배열이 아니면 기본값 사용)
-				let agentPositionsData: Array<[number, number]> = [];
-				let isValidAgentPos = false;
-
+				// episodeData의 기본 구조 및 필수 필드 확인
 				if (
-					"agent_pos" in episodeDataUntyped &&
-					Array.isArray(episodeDataUntyped.agent_pos)
+					episodeDataUntyped &&
+					typeof episodeDataUntyped === "object" &&
+					"state" in episodeDataUntyped &&
+					Array.isArray(episodeDataUntyped.state) &&
+					episodeDataUntyped.state.length > 0 &&
+					"instruction" in episodeDataUntyped &&
+					typeof episodeDataUntyped.instruction === "string"
 				) {
-					// EpisodeData 타입으로 간주하여 agent_pos에 접근
-					const typedEpisodeData = episodeDataUntyped as EpisodeData;
-					agentPositionsData = typedEpisodeData.agent_pos;
+					// agent_pos 필드가 있고 배열인지 확인 (없거나 배열이 아니면 기본값 사용)
+					let agentPositionsData: Array<[number, number]> = [];
+					let isValidAgentPos = false;
 
-					// agent_pos 내부 데이터 구조 유효성 검사 (모든 요소가 [number, number] 형태인지)
-					isValidAgentPos = agentPositionsData.every(
-						(pos) =>
-							Array.isArray(pos) &&
-							pos.length === 2 &&
-							pos.every((p) => typeof p === "number"),
-					);
+					if (
+						"agent_pos" in episodeDataUntyped &&
+						Array.isArray(episodeDataUntyped.agent_pos)
+					) {
+						// EpisodeData 타입으로 간주하여 agent_pos에 접근
+						const typedEpisodeData = episodeDataUntyped as EpisodeData;
+						agentPositionsData = typedEpisodeData.agent_pos;
 
-					if (!isValidAgentPos && import.meta.env.DEV) {
+						// agent_pos 내부 데이터 구조 유효성 검사 (모든 요소가 [number, number] 형태인지)
+						isValidAgentPos = agentPositionsData.every(
+							(pos) =>
+								Array.isArray(pos) &&
+								pos.length === 2 &&
+								pos.every((p) => typeof p === "number"),
+						);
+
+						if (!isValidAgentPos && import.meta.env.DEV) {
+							console.warn(
+								`[MapCandidates] Episode ${key}: Invalid agent_pos data structure inside array. Each element should be [number, number]. Received:`,
+								agentPositionsData,
+							);
+						}
+					}
+					if (
+						import.meta.env.DEV &&
+						episodeDataUntyped &&
+						typeof episodeDataUntyped === "object" &&
+						!("agent_pos" in episodeDataUntyped)
+					) {
 						console.warn(
-							`[MapCandidates] Episode ${key}: Invalid agent_pos data structure inside array. Each element should be [number, number]. Received:`,
-							agentPositionsData,
+							`[MapCandidates] Episode ${key}: agent_pos field is missing. Defaulting to empty array.`,
+						);
+					} else if (
+						import.meta.env.DEV &&
+						episodeDataUntyped &&
+						typeof episodeDataUntyped === "object" &&
+						"agent_pos" in episodeDataUntyped &&
+						!Array.isArray(episodeDataUntyped.agent_pos)
+					) {
+						console.warn(
+							`[MapCandidates] Episode ${key}: agent_pos field is not an array. Defaulting to empty array. Received:`,
+							episodeDataUntyped.agent_pos,
 						);
 					}
-				} else if (
-					import.meta.env.DEV &&
-					episodeDataUntyped &&
-					typeof episodeDataUntyped === "object" &&
-					!("agent_pos" in episodeDataUntyped)
-				) {
-					console.warn(
-						`[MapCandidates] Episode ${key}: agent_pos field is missing. Defaulting to empty array.`,
-					);
-				} else if (
-					import.meta.env.DEV &&
-					episodeDataUntyped &&
-					typeof episodeDataUntyped === "object" &&
-					"agent_pos" in episodeDataUntyped &&
-					!Array.isArray(episodeDataUntyped.agent_pos)
-				) {
-					console.warn(
-						`[MapCandidates] Episode ${key}: agent_pos field is not an array. Defaulting to empty array. Received:`,
-						episodeDataUntyped.agent_pos,
-					);
-				}
 
-				const lastState = episodeDataUntyped.state.at(-1);
-				if (lastState) {
-					if (import.meta.env.DEV) {
-						console.log(
-							`[MapCandidates] Processing Episode ${key}: statesLength=${episodeDataUntyped.state.length}, agentPosLength=${agentPositionsData.length}, instruction="${episodeDataUntyped.instruction}", agent_pos_valid=${isValidAgentPos}`,
-						);
+					const lastState = episodeDataUntyped.state.at(-1);
+					if (lastState) {
+						if (import.meta.env.DEV) {
+							console.log(
+								`[MapCandidates] Processing Episode ${key}: statesLength=${episodeDataUntyped.state.length}, agentPosLength=${agentPositionsData.length}, instruction="${episodeDataUntyped.instruction}", agent_pos_valid=${isValidAgentPos}`,
+							);
+						}
+						candidates.push({
+							map: lastState,
+							instruction: episodeDataUntyped.instruction,
+							episodeId: key,
+							states: episodeDataUntyped.state,
+							agentPositions: isValidAgentPos ? agentPositionsData : [], // 유효한 경우에만 할당, 아니면 빈 배열
+						});
 					}
-					candidates.push({
-						map: lastState,
-						instruction: episodeDataUntyped.instruction,
-						episodeId: key,
-						states: episodeDataUntyped.state,
-						agentPositions: isValidAgentPos ? agentPositionsData : [], // 유효한 경우에만 할당, 아니면 빈 배열
-					});
+				} else if (import.meta.env.DEV) {
+					console.warn(
+						`[MapCandidates] Episode ${key}: Missing critical fields (state or instruction) or invalid data type. Skipping. Data:`,
+						episodeDataUntyped,
+					);
 				}
-			} else if (import.meta.env.DEV) {
-				console.warn(
-					`[MapCandidates] Episode ${key}: Missing critical fields (state or instruction) or invalid data type. Skipping. Data:`,
-					episodeDataUntyped,
-				);
 			}
 		}
+
 		return candidates;
 	},
 );
@@ -173,15 +196,15 @@ export const mapCandidates = derived(
  * 그렇지 않으면 null을 반환합니다
  */
 export const currentMapInstruction = derived(
-	[mapCandidates, mapState],
-	([$mapCandidates, $mapState]): string | null => {
-		if (!$mapState || $mapCandidates.length === 0) {
+	[mapCandidates],
+	([$mapCandidates]): string | null => {
+		if ($mapCandidates.length === 0) {
 			return null;
 		}
 
 		// Find a candidate whose map matches the current mapState
 		// GridMap을 JSON 문자열로 비교하여 일치하는 후보를 찾습니다
-		const currentMapJson = JSON.stringify($mapState);
+		const currentMapJson = JSON.stringify($mapCandidates[0].map);
 		const matchingCandidate = $mapCandidates.find(
 			(candidate) => JSON.stringify(candidate.map) === currentMapJson,
 		);

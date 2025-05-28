@@ -4,7 +4,7 @@
 	import SimpleProgressBar from '$lib/components/GridMap/SimpleProgressBar.svelte';
 	import type { GridMap } from '$lib/core/grid-map';
 	import { mapState } from '$lib/store/editor';
-	import { mapCandidates, type MapCandidate } from '$lib/store/editor/map-candidates';
+	import { mapCandidates, mapBuffer, type MapCandidate } from '$lib/store/editor/map-candidates';
 	import { animationConfig, logAnimationConfig } from '$lib/utils/env';
 	import { onDestroy } from 'svelte';
 
@@ -53,6 +53,28 @@
 		return null;
 	});
 
+	// Combined candidates for display (AI candidates + original map)
+	// 표시용 통합 후보 목록 (AI 후보 + 원본 맵)
+	const displayCandidates = $derived.by(() => {
+		const aiCandidates = $mapCandidates;
+		const originalMap = $mapBuffer;
+
+		if (!originalMap) {
+			return aiCandidates;
+		}
+
+		// Add original map as the last candidate
+		const originalCandidate: MapCandidate = {
+			map: originalMap,
+			instruction: 'Original Map',
+			episodeId: 'original',
+			states: [originalMap],
+			agentPositions: []
+		};
+
+		return [...aiCandidates, originalCandidate];
+	});
+
 	/**
 	 * Handle clicking on a map candidate
 	 * Updates the current mapState with the selected candidate
@@ -68,6 +90,18 @@
 		stopSelectionAnimation(true);
 		selectedCandidate = candidate;
 
+		// Handle original map restoration
+		if (candidate.episodeId === 'original') {
+			// Restore from mapBuffer
+			mapState.set(candidate.map);
+			currentAnimationAgentPos = null;
+			if (import.meta.env.DEV) {
+				console.log('[Page] Original map restored from mapBuffer.');
+			}
+			return;
+		}
+
+		// Handle AI-generated map candidates
 		if ($animationConfig.selectionAnimationMode && candidate.states.length > 1) {
 			selectionAnimationStates = candidate.states;
 			selectionAnimationAgentPositions = candidate.agentPositions || [];
@@ -312,7 +346,7 @@
 		<!-- Scrollable Content Area - Takes remaining space -->
 		<!-- 스크롤 가능한 콘텐츠 영역 - 남은 공간을 모두 차지 -->
 		<div class="min-h-0 flex-1 overflow-y-auto">
-			{#if $mapCandidates.length === 0}
+			{#if displayCandidates.length === 0}
 				<!-- Empty state message -->
 				<div class="flex h-full items-center justify-center">
 					<div class="text-center text-gray-500">
@@ -324,9 +358,12 @@
 				<!-- Candidates grid display with responsive columns -->
 				<!-- 반응형 컬럼을 가진 후보 그리드 표시 -->
 				<div class="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
-					{#each $mapCandidates as candidate, index (candidate.episodeId)}
+					{#each displayCandidates as candidate, index (candidate.episodeId)}
+						{@const isOriginalMap = candidate.episodeId === 'original'}
 						<div
-							class="cursor-pointer rounded-lg border-2 border-gray-200 p-2 transition-all hover:border-blue-500 hover:shadow-md"
+							class="cursor-pointer rounded-lg border-2 p-2 transition-all hover:shadow-md {isOriginalMap
+								? 'border-green-300 bg-green-50 hover:border-green-500'
+								: 'border-gray-200 hover:border-blue-500'}"
 							onclick={() => handleCandidateClick(candidate)}
 							role="button"
 							tabindex="0"
@@ -339,15 +376,25 @@
 							}}
 						>
 							<div class="mb-2 text-center">
-								<span class="text-xs font-medium text-gray-600">Candidate {index + 1}</span>
+								<span
+									class="text-xs font-medium {isOriginalMap ? 'text-green-700' : 'text-gray-600'}"
+								>
+									{isOriginalMap ? 'Original Map' : `Candidate ${index}`}
+								</span>
 							</div>
 							<!-- Flex layout with Grid and Instruction label -->
 							<!-- Grid와 Instruction 라벨이 포함된 Flex 레이아웃 -->
 							<div class="flex flex-col gap-2">
 								<!-- Instruction label displayed above the grid for consistency -->
 								<!-- 통일성을 위해 그리드 위에 표시되는 Instruction 라벨 -->
-								<div class="max-h-8 overflow-hidden text-xs leading-tight text-gray-700">
-									<span class="font-medium text-gray-500">Instruction:</span>
+								<div
+									class="max-h-8 overflow-hidden text-xs leading-tight {isOriginalMap
+										? 'text-green-800'
+										: 'text-gray-700'}"
+								>
+									<span class="font-medium {isOriginalMap ? 'text-green-600' : 'text-gray-500'}">
+										{isOriginalMap ? 'Type:' : 'Instruction:'}
+									</span>
 									<span class="ml-1">{candidate.instruction}</span>
 								</div>
 								<!-- 1:1 aspect ratio container for consistent grid layout -->
@@ -384,10 +431,14 @@
 	<div class="flex min-h-0 flex-col gap-2 p-4">
 		<!-- Fixed Title Area - Never shrinks -->
 		<div class="flex-shrink-0">
-			<h2 class="text-xl font-bold text-gray-800">Current Selected Map</h2>
+			<h2 class="text-xl font-bold text-gray-800">
+				{selectedCandidate?.episodeId === 'original' ? 'Original Map' : 'Current Selected Map'}
+			</h2>
 			<p class="text-sm text-gray-600">
 				{selectedCandidate
-					? 'The currently selected map.'
+					? selectedCandidate.episodeId === 'original'
+						? 'The original map that you can edit and modify.'
+						: 'The currently selected AI-generated map candidate.'
 					: 'No map selected. Select a candidate from the left or generate a new one.'}
 			</p>
 		</div>
@@ -397,15 +448,20 @@
 			<div class="flex min-h-0 flex-1 flex-col gap-2">
 				<!-- Instruction display area - Fixed height h-10 -->
 				{#if selectedCandidate && selectedCandidate.instruction}
-					{@const sedangAnimasi = isPlayingSelectionAnimation}
 					<div
-						class="flex h-10 flex-shrink-0 items-center rounded-md border-l-4 px-3 text-xs {sedangAnimasi
+						class="flex h-10 flex-shrink-0 items-center rounded-md border-l-4 px-3 text-xs {isPlayingSelectionAnimation
 							? 'border-blue-400 bg-blue-50 text-blue-700'
-							: 'border-gray-400 bg-gray-50 text-gray-800'}"
+							: selectedCandidate.episodeId === 'original'
+								? 'border-green-400 bg-green-50 text-green-800'
+								: 'border-gray-400 bg-gray-50 text-gray-800'}"
 					>
 						<div class="flex items-center gap-2">
 							<span class="font-medium">
-								{sedangAnimasi ? 'Applying for:' : 'Current Instruction:'}
+								{isPlayingSelectionAnimation
+									? 'Applying for:'
+									: selectedCandidate.episodeId === 'original'
+										? 'Type:'
+										: 'Current Instruction:'}
 							</span>
 							<span>{selectedCandidate.instruction}</span>
 						</div>

@@ -8,6 +8,7 @@
 	import { numberOfStep } from '$lib/store/editor/number-of-step';
 	import { mapState } from '$lib/store/editor/map-state';
 	import { responseHistory } from '$lib/store/chat/response-history';
+	import { captureOriginalMap } from '$lib/store/editor/map-candidates';
 
 	const {
 		placeholder = 'Type your message...',
@@ -188,15 +189,15 @@
 			isLoadingAPI = true;
 
 			try {
-				// 요청 데이터 생성
-				const requestPayload: RequestFormat = {
-					current_level: $mapState, // Use mapState store value
-					step_count: $numberOfStep, // Use numberOfStep store value
-					instruction: trimmedMessage
-				};
+				// Capture current map state as original before generating AI candidates
+				captureOriginalMap($mapState);
 
 				const startTime = performance.now(); // Record inference start time
-				const response: ResponseFormat = await requestInference(requestPayload);
+				const response: ResponseFormat = await requestInference({
+					current_level: $mapState,
+					step_count: $numberOfStep,
+					instruction: trimmedMessage
+				});
 				const endTime = performance.now(); // Record inference end time
 				const inferenceTimeSeconds = ((endTime - startTime) / 1000).toFixed(3); // Convert to seconds and format to 3 decimal places
 
