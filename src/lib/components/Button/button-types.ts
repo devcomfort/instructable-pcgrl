@@ -14,6 +14,7 @@ import { z } from "zod";
  *   - "play": 재생 아이콘
  *   - "share": 공유 아이콘
  *   - "feedback": 피드백 아이콘
+ *   - "random": 랜덤 아이콘
  */
 export const ButtonTypesSchema = z.enum([
 	"pencil",
@@ -25,6 +26,7 @@ export const ButtonTypesSchema = z.enum([
 	"play",
 	"share",
 	"feedback",
+	"random",
 ]);
 
 /**

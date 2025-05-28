@@ -61,6 +61,10 @@ export const ButtonPropsSchema = z.object({
 		.optional()
 		.describe("버튼의 값"),
 	class: ClassValueSchema.optional().describe("버튼에 적용될 CSS 클래스"),
+	title: z
+		.string()
+		.optional()
+		.describe("버튼에 대한 추가 정보를 제공하는 HTML title 속성"),
 });
 
 /**
@@ -74,6 +78,7 @@ export const ButtonPropsSchema = z.object({
  * @property {string} [buttonText] - 버튼에 표시될 텍스트
  * @property {string} [buttonValue] - 버튼의 값
  * @property {ClassValue} class - 버튼에 적용될 CSS 클래스
+ * @property {string} [title] - HTML title 속성
  */
 export interface ButtonProps {
 	onclick?: (e: MouseEvent) => void;
@@ -83,4 +88,5 @@ export interface ButtonProps {
 	buttonText?: string;
 	buttonValue?: string;
 	class?: ClassValue;
+	title?: string;
 }
