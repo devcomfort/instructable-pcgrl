@@ -4,6 +4,8 @@
  */
 
 import { readable } from "svelte/store";
+import { Tileset, type TilesetValue } from "$lib/core"; // Tileset import 추가
+import { nextRandom } from "./random"; // nextRandom import 추가
 
 /**
  * Enhanced boolean parsing with comprehensive validation
@@ -274,3 +276,125 @@ export function logAnimationConfig() {
  * 외부 사용을 위한 유틸리티 함수 내보내기
  */
 export { parseBooleanEnv, parseNumberEnv, parseStringEnv };
+
+/**
+ * Tile generation probability configuration type
+ * 타일 생성 확률 설정 타입
+ */
+export type TileGenerationProbabilities = {
+	EMPTY: number;
+	WALL: number;
+	BAT: number;
+};
+
+/**
+ * Default probabilities if environment variables are not set or invalid.
+ * 환경 변수가 설정되지 않았거나 유효하지 않은 경우의 기본 확률.
+ */
+const DEFAULT_TILE_PROBABILITIES: TileGenerationProbabilities = {
+	EMPTY: 0.7,
+	WALL: 0.2,
+	BAT: 0.1,
+};
+
+/**
+ * Load tile generation probabilities from environment variables.
+ * 환경변수에서 타일 생성 확률 로드.
+ * Normalizes probabilities to sum to 1.
+ * 확률의 합이 1이 되도록 정규화합니다.
+ */
+function loadTileGenerationProbabilities(): TileGenerationProbabilities {
+	try {
+		const probEmpty = parseNumberEnv(
+			import.meta.env.VITE_PROBABILITY_FOR_EMPTY,
+			DEFAULT_TILE_PROBABILITIES.EMPTY,
+			"VITE_PROBABILITY_FOR_EMPTY",
+			{ allowFloat: true, min: 0 },
+		);
+		const probWall = parseNumberEnv(
+			import.meta.env.VITE_PROBABILITY_FOR_WALL,
+			DEFAULT_TILE_PROBABILITIES.WALL,
+			"VITE_PROBABILITY_FOR_WALL",
+			{ allowFloat: true, min: 0 },
+		);
+		const probBat = parseNumberEnv(
+			import.meta.env.VITE_PROBABILITY_FOR_BAT,
+			DEFAULT_TILE_PROBABILITIES.BAT,
+			"VITE_PROBABILITY_FOR_BAT",
+			{ allowFloat: true, min: 0 },
+		);
+
+		const totalProb = probEmpty + probWall + probBat;
+
+		if (totalProb <= 0) {
+			// If sum is 0 or negative (e.g., all are 0), use defaults to avoid division by zero
+			console.warn(
+				`[TileGenerationProbabilities] Total probability is ${totalProb}. Using default probabilities.`,
+				DEFAULT_TILE_PROBABILITIES,
+			);
+			return DEFAULT_TILE_PROBABILITIES;
+		}
+
+		const probabilities = {
+			EMPTY: probEmpty / totalProb,
+			WALL: probWall / totalProb,
+			BAT: probBat / totalProb,
+		};
+
+		// Ensure the sum is very close to 1 after normalization
+		const finalSum =
+			probabilities.EMPTY + probabilities.WALL + probabilities.BAT;
+		if (Math.abs(finalSum - 1) > 1e-9) {
+			// Check for floating point inaccuracies
+			console.warn(
+				`[TileGenerationProbabilities] Normalized probabilities do not sum to 1 (sum: ${finalSum}). This might indicate an issue. Probabilities:`,
+				probabilities,
+			);
+			// Optional: Could re-normalize or stick with it if close enough
+		}
+
+		console.log(
+			"[TileGenerationProbabilities] Environment variables loaded successfully:",
+			probabilities,
+		);
+		return probabilities;
+	} catch (error) {
+		console.error(
+			"[TileGenerationProbabilities] Failed to load environment variables:",
+			error,
+		);
+		// Return default values on error
+		return DEFAULT_TILE_PROBABILITIES;
+	}
+}
+
+/**
+ * Reactive tile generation probabilities store.
+ * 반응형 타일 생성 확률 스토어.
+ */
+export const tileGenerationProbabilities =
+	readable<TileGenerationProbabilities>(loadTileGenerationProbabilities());
+
+/**
+ * Utility function to get a random tile based on configured probabilities.
+ * 설정된 확률에 따라 랜덤 타일을 가져오는 유틸리티 함수.
+ * @param probabilities - The probabilities for each tile type.
+ * @returns A TilesetValue.
+ */
+export function getRandomTile(
+	probabilities: TileGenerationProbabilities,
+): TilesetValue {
+	const rand = nextRandom(); // Math.random() 대신 nextRandom() 사용
+	let cumulativeProbability = 0;
+
+	cumulativeProbability += probabilities.EMPTY;
+	if (rand < cumulativeProbability) {
+		return Tileset.EMPTY;
+	}
+	cumulativeProbability += probabilities.WALL;
+	if (rand < cumulativeProbability) {
+		return Tileset.WALL;
+	}
+	// BAT is the last one, so it takes the remainder of the probability.
+	return Tileset.BAT;
+}
