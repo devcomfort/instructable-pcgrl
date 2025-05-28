@@ -12,6 +12,7 @@ import { readable } from "svelte/store";
 function parseBooleanEnv(
 	value: string | undefined,
 	defaultValue = false,
+	// eslint-disable-next-line no-unused-vars - Parameter exists for console.log usage. Should not be removed as it's an actual input value.
 	varName = "UNKNOWN",
 ): boolean {
 	// console.log(`[ENV Parse] ${varName}:`, { raw: value, default: defaultValue }); // 개발 중 상세 로그
